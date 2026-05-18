@@ -10,8 +10,10 @@ const pool = mysql.createPool({
     waitForConnections: true,
     connectionLimit: 10,
     queueLimit: 0,
-    // GANTI MENJADI STRING INI
-    ssl: "Amazon RDS" 
+    // Gunakan konfigurasi objek SSL ini agar Aiven tidak memutus koneksi secara sepihak
+    ssl: {
+        rejectUnauthorized: false
+    }
 });
 
 module.exports = pool;
