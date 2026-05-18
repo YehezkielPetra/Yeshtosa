@@ -245,9 +245,10 @@ app.get('/pesanan/delete/:id', isAuthenticated, async (req, res) => {
     }
 });
 
-// 4. History Pesanan & Produksi Terkelompok (Grouped) Lintas Akun Aman
+// 4. History Pesanan & Produksi Terkelompok dengan Filter Tanggal dan Cari Nama Pemesan
 app.get('/history', isAuthenticated, async (req, res) => {
     const filterTanggal = req.query.tanggal || '';
+    const cariNama = req.query.nama || '';
     try {
         let paramsOrders = [req.session.userId];
         let paramsProduksi = [req.session.userId];
@@ -261,6 +262,11 @@ app.get('/history', isAuthenticated, async (req, res) => {
             
         let queryProduksi = `SELECT id, jumlah_kg, jumlah_kue, rasa, ukuran, tanggal_produksi FROM produksi WHERE user_id = ?`;
         
+        if (cariNama) {
+            queryOrders += ' AND p.nama_pemesan LIKE ?';
+            paramsOrders.push(`%${cariNama}%`);
+        }
+
         if (filterTanggal) {
             queryOrders += ' AND p.tanggal_kirim = ?';
             queryProduksi += ' AND tanggal_produksi = ?';
@@ -298,12 +304,12 @@ app.get('/history', isAuthenticated, async (req, res) => {
         });
         const orders = Object.values(groupedOrdersMap);
 
-        // ================= LOGIKA GROUPING LOG PRODUKSI (GABUNG BERDASARKAN HARI & ADONAN KG YANG SAMA) =================
+        // ================= LOGIKA GROUPING LOG PRODUKSI (MUTLAK GABUNG BERDASARKAN HARI & KG) =================
         const groupedProduksiMap = {};
         rowsProduksi.forEach(row => {
             const tglString = new Date(row.tanggal_produksi).toLocaleDateString('fr-CA');
             
-            // Satukan total Kg dan Hari sebagai kunci penentu agregasi kotak tunggal
+            // Menggunakan kombinasi String tanggal dan parsing desimal presisi dari bobot Kg
             const uniqueKey = `${tglString}_${parseFloat(row.jumlah_kg).toFixed(2)}`;
             
             if (!groupedProduksiMap[uniqueKey]) {
@@ -321,7 +327,7 @@ app.get('/history', isAuthenticated, async (req, res) => {
         });
         const productions = Object.values(groupedProduksiMap);
         
-        res.render('history', { orders, productions, filterTanggal });
+        res.render('history', { orders, productions, filterTanggal, cariNama });
     } catch (err) {
         console.error("🔥 Gagal memuat data histori log:", err);
         res.status(500).send("Gagal mengambil data riwayat log.");
