@@ -1,6 +1,6 @@
 const express = require('express');
 const session = require('express-session');
-const bcrypt = require('bcryptjs'); 
+const bcrypt = require('bcryptjs'); // Menggunakan bcryptjs agar aman dan lancar di Windows
 const path = require('path');
 const db = require('./config/db');
 const isAuthenticated = require('./middleware/auth');
@@ -162,14 +162,12 @@ app.post('/pesanan', isAuthenticated, async (req, res) => {
     }
 });
 
-// 3. Manage Pesanan (Hanya mengambil pesanan milik user_id yang login)
+// 3. Manage Pesanan (Mengambil kolom p.catatan milik user_id yang login)
 app.get('/manage-pesanan', isAuthenticated, async (req, res) => {
-
     console.log("===> USER YANG SEDANG AKSES MANAGE PESANAN, ID-NYA ADALAH:", req.session.userId);
-    
     try {
         const [orders] = await db.query(`
-            SELECT p.id, p.nama_pemesan, p.tanggal_kirim, p.status_bayar,
+            SELECT p.id, p.nama_pemesan, p.tanggal_kirim, p.status_bayar, p.catatan,
                    pd.id AS detail_id, pd.jumlah_kue, pd.rasa, pd.ukuran, pd.is_frozen
             FROM pesanan p
             JOIN pesanan_detail pd ON p.id = pd.pesanan_id
@@ -193,17 +191,21 @@ app.post('/pesanan/status/:id', isAuthenticated, async (req, res) => {
     }
 });
 
-// Update Data Item Pesanan
+// Update Data Item Pesanan & Catatan Textarea
 app.post('/pesanan/update/:id', isAuthenticated, async (req, res) => {
-    const { jumlah_kue, rasa, ukuran, tanggal_kirim, pesanan_id } = req.body;
+    const { jumlah_kue, rasa, ukuran, tanggal_kirim, pesanan_id, catatan } = req.body;
     try {
-        await db.query('UPDATE pesanan SET tanggal_kirim = ? WHERE id = ? AND user_id = ?', [tanggal_kirim, pesanan_id, req.session.userId]);
+        // Pembaruan tanggal kirim dan teks catatan di tabel master pesanan
+        await db.query('UPDATE pesanan SET tanggal_kirim = ?, catatan = ? WHERE id = ? AND user_id = ?', [tanggal_kirim, catatan, pesanan_id, req.session.userId]);
+        
+        // Pembaruan rincian spesifikasi kue di tabel detail
         await db.query(
             'UPDATE pesanan_detail SET jumlah_kue = ?, rasa = ?, ukuran = ? WHERE id = ?',
             [jumlah_kue, rasa, ukuran, req.params.id]
         );
         res.redirect('/manage-pesanan?status=updatesuccess');
     } catch (err) {
+        console.error("🔥 Gagal memperbarui rincian pesanan:", err);
         res.redirect('/manage-pesanan?status=updatefailed');
     }
 });
@@ -222,7 +224,7 @@ app.get('/pesanan/delete/:id', isAuthenticated, async (req, res) => {
     }
 });
 
-// 4. History Pesanan (PERBAIKAN LOGIKA QUERY AGAR BENAR-BENAR PRIVAT)
+// 4. History Pesanan (Agregasi Privat & Pengelompokan Data)
 app.get('/history', isAuthenticated, async (req, res) => {
     const filterTanggal = req.query.tanggal || '';
     try {
@@ -230,15 +232,15 @@ app.get('/history', isAuthenticated, async (req, res) => {
         let paramsProduksi = [req.session.userId];
         
         let queryOrders = `
-            SELECT p.id AS pesanan_id, p.nama_pemesan, p.tanggal_kirim, p.status_bayar, 
+            SELECT p.id AS pesanan_id, p.nama_pemesan, p.tanggal_kirim, p.status_bayar, p.catatan,
                    pd.id AS detail_id, pd.jumlah_kue, pd.rasa, pd.ukuran, pd.is_frozen
             FROM pesanan p
             JOIN pesanan_detail pd ON p.id = pd.pesanan_id
             WHERE p.user_id = ?`;
             
-        let queryProduksi = `SELECT jumlah_kg, jumlah_kue, rasa, ukuran, tanggal_produksi, created_at FROM produksi WHERE user_id = ?`;
-        
-        // Perbaikan: Gunakan "AND" agar filter tanggal tidak merusak aturan user_id
+        let queryProduksi = `SELECT jumlah_kg, jumlah_kue, rasa, ukuran, tanggal_produksi, created_at FROM_SET produksi WHERE user_id = ?`;
+        queryProduksi = queryProduksi.replace('FROM_SET', 'FROM');
+
         if (filterTanggal) {
             queryOrders += ' AND p.tanggal_kirim = ?';
             queryProduksi += ' AND tanggal_produksi = ?';
@@ -252,7 +254,6 @@ app.get('/history', isAuthenticated, async (req, res) => {
         const [rowsOrders] = await db.query(queryOrders, paramsOrders);
         const [productions] = await db.query(queryProduksi, paramsProduksi);
         
-        // ================= LOGIKA GROUPING BERDASARKAN NAMA & HARI =================
         const groupedOrdersMap = {};
         
         rowsOrders.forEach(row => {
@@ -264,6 +265,7 @@ app.get('/history', isAuthenticated, async (req, res) => {
                     nama_pemesan: row.nama_pemesan,
                     tanggal_kirim: row.tanggal_kirim,
                     status_bayar: row.status_bayar,
+                    catatan: row.catatan, // Ambil catatan untuk dilempar ke EJS history
                     details: []
                 };
             }

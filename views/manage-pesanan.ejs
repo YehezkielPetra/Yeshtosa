@@ -6,7 +6,7 @@
         <thead>
             <tr class="border-b dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-700 dark:text-gray-300">
                 <th class="p-4">Pemesan</th>
-                <th class="p-4">Spesifikasi Detail Kue</th>
+                <th class="p-4">Spesifikasi Detail Kue & Catatan</th>
                 <th class="p-4">Tanggal Kirim</th>
                 <th class="p-4">Status Bayar</th>
                 <th class="p-4 text-center">Modifikasi Pesanan</th>
@@ -17,13 +17,13 @@
                 <tr><td colspan="5" class="p-4 text-center text-gray-400">Tidak ada pesanan aktif tersedia.</td></tr>
             <% } %>
             <% orders.forEach(order => { %>
-                <tr>
+                <tr class="align-top">
                     <td class="p-4 font-bold text-gray-900 dark:text-white">
                         <%= order.nama_pemesan %>
                     </td>
                     
                     <td class="p-4">
-                        <div class="flex items-center space-x-1">
+                        <div class="flex items-center space-x-1 mb-2">
                             <input type="number" form="form-update-<%= order.detail_id %>" name="jumlah_kue" value="<%= order.jumlah_kue %>" class="w-16 p-1 text-center bg-gray-50 dark:bg-gray-700 rounded border dark:border-gray-600 text-gray-900 dark:text-white">
                             <span>Pcs, </span>
                             <select form="form-update-<%= order.detail_id %>" name="rasa" class="p-1 bg-gray-50 dark:bg-gray-700 rounded border dark:border-gray-600 text-xs text-gray-900 dark:text-white">
@@ -36,11 +36,17 @@
                                 <option value="jumbo" <%= order.ukuran==='jumbo'?'selected':'' %>>Jumbo</option>
                             </select>
                         </div>
+                        
                         <% if(order.is_frozen) { %>
-                            <div class="mt-1">
+                            <div class="mb-3">
                                 <span class="inline-block text-[10px] bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 font-bold px-2 py-0.5 rounded">📦 FROZEN STATE</span>
                             </div>
                         <% } %>
+
+                        <div class="mt-2">
+                            <label class="block text-[11px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wide mb-1">Catatan Tambahan:</label>
+                            <textarea form="form-update-<%= order.detail_id %>" name="catatan" rows="2" class="w-full max-w-md p-2 text-xs bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white rounded-xl border border-gray-200 dark:border-gray-600 focus:outline-none focus:ring-1 focus:ring-amber-500 transition" placeholder="Tambahkan instruksi (contoh: minta sendok, packing aman)..."><%= order.catatan || '' %></textarea>
+                        </div>
                     </td>
                     
                     <td class="p-4">
@@ -60,9 +66,9 @@
                     <td class="p-4 text-center space-x-1">
                         <form id="form-update-<%= order.detail_id %>" action="/pesanan/update/<%= order.detail_id %>" method="POST" class="inline">
                             <input type="hidden" name="pesanan_id" value="<%= order.id %>">
-                            <button type="submit" class="bg-amber-500 hover:bg-amber-600 text-white px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors">Simpan Edit</button>
+                            <button type="submit" class="bg-amber-500 hover:bg-amber-600 text-white px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors shadow-sm">Simpan Edit</button>
                         </form>
-                        <button type="button" onclick="pemicuKonfirmasiHapus('<%= order.detail_id %>')" class="bg-red-500 hover:bg-red-600 text-white px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors">Hapus</button>
+                        <button type="button" onclick="pemicuKonfirmasiHapus('<%= order.detail_id %>')" class="bg-red-500 hover:bg-red-600 text-white px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors shadow-sm">Hapus</button>
                     </td>
                 </tr>
             <% }) %>
