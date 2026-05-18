@@ -115,19 +115,19 @@
 <script>
     function switchTab(tabName) {
         const pesananBtn = document.getElementById('tab-btn-pesanan');
-        constBox = document.getElementById('tab-btn-produksi');
+        const produksiBtn = document.getElementById('tab-btn-produksi');
         const pesananContent = document.getElementById('content-tab-pesanan');
-        const produksiContent = document.getElementById('content-tab-produksi');
+        constApp = document.getElementById('content-tab-produksi');
 
         if (tabName === 'pesanan') {
             pesananContent.classList.remove('hidden');
-            constBox.classList.add('hidden');
+            constApp.classList.add('hidden');
             pesananBtn.className = "px-5 py-2.5 rounded-xl text-sm font-bold transition duration-200 bg-white dark:bg-gray-800 text-gray-800 dark:text-white shadow-sm";
-            constBox.className = "px-5 py-2.5 rounded-xl text-sm font-bold transition duration-200 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200";
+            produksiBtn.className = "px-5 py-2.5 rounded-xl text-sm font-bold transition duration-200 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200";
         } else if (tabName === 'produksi') {
-            constBox.classList.remove('hidden');
+            constApp.classList.remove('hidden');
             pesananContent.classList.add('hidden');
-            constBox.className = "px-5 py-2.5 rounded-xl text-sm font-bold transition duration-200 bg-white dark:bg-gray-800 text-gray-800 dark:text-white shadow-sm";
+            produksiBtn.className = "px-5 py-2.5 rounded-xl text-sm font-bold transition duration-200 bg-white dark:bg-gray-800 text-gray-800 dark:text-white shadow-sm";
             pesananBtn.className = "px-5 py-2.5 rounded-xl text-sm font-bold transition duration-200 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200";
         }
     }

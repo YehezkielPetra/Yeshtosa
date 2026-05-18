@@ -12,6 +12,14 @@
     <div class="relative z-[1000000]">
         <%- include('popup') %>
 
+        <% if (typeof status !== 'undefined' && status === 'stockinsufficient') { %>
+            <script>
+                window.addEventListener('DOMContentLoaded', () => {
+                    alert("⚠️ PERINGATAN GAGAL MENYIMPAN!\n\nSaldo stok kue gogos di gudang tidak mencukupi untuk memproses kuantitas permintaan transaksi pesanan ini.\n\nSilakan periksa ketersediaan menu di Dashboard utama sebelum melanjutkan.");
+                });
+            </script>
+        <% } %>
+
         <div id="modalKonfirmasiHapus" class="fixed inset-0 hidden flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm transition-opacity duration-300">
             <div class="bg-white dark:bg-gray-800 rounded-lg w-full max-w-lg p-10 shadow-2xl text-center flex flex-col items-center justify-center border border-gray-100 dark:border-gray-700">
                 <div class="mb-6 flex items-center justify-center">

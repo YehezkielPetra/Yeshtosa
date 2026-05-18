@@ -1,19 +1,51 @@
 <%- include('layouts/header') %>
-<div class="text-center my-8">
-    <h2 class="text-2xl font-serif font-bold">Selamat Datang Admin, <%= username %>!</h2>
-    <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Silakan pilih menu manajemen aktivitas toko kue hari ini.</p>
-</div>
+<div class="space-y-6">
+    <div class="bg-gradient-to-r from-amber-400 to-amber-500 text-white p-6 rounded-2xl shadow-sm">
+        <h2 class="text-xl font-bold font-serif mb-1">Selamat Datang Kembali, <%= username %>!</h2>
+        <p class="text-xs opacity-90">Pantau pergerakan saldo stok gogos dan kelola pesanan toko kue Yeshtosa Anda.</p>
+    </div>
 
-<div class="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto mt-10">
-    <a href="/produksi" class="block p-6 bg-white dark:bg-gray-800 border dark:border-gray-700 hover:border-kue-brand dark:hover:border-kue-brand rounded-2xl shadow-sm transition group">
-        <span class="text-4xl block mb-3">🍳</span>
-        <h3 class="text-lg font-bold group-hover:text-kue-brand transition">1. Input Jumlah yang Perlu Dimasak</h3>
-        <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">Kelola kebutuhan bahan baku memasak, kalkulasi berat (kg), takaran ukuran porsi, serta varian tingkat kepedasan rasa kue.</p>
-    </a>
-    <a href="/pesanan" class="block p-6 bg-white dark:bg-gray-800 border dark:border-gray-700 hover:border-kue-brand dark:hover:border-kue-brand rounded-2xl shadow-sm transition group">
-        <span class="text-4xl block mb-3">📥</span>
-        <h3 class="text-lg font-bold group-hover:text-kue-brand transition">2. Input Data Pesanan Masuk</h3>
-        <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">Pencatatan invoice pesanan pelanggan baru secara instan, konfigurasi pengemasan paket frozen, serta tanggal pengiriman dinamis.</p>
-    </a>
+    <div class="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border dark:border-gray-700">
+        <div class="flex items-center space-x-2 mb-4 border-b dark:border-gray-700 pb-3">
+            <span class="text-lg">📊</span>
+            <h3 class="font-serif font-bold text-base text-gray-800 dark:text-gray-200">Saldo Monitor Ketersediaan Stok Kue</h3>
+        </div>
+
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm border-collapse">
+                <thead>
+                    <tr class="bg-gray-50 dark:bg-gray-900 text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider border-b dark:border-gray-700 text-xs">
+                        <th class="p-3">Varian Rasa</th>
+                        <th class="p-3">Ukuran Kue</th>
+                        <th class="p-3 text-right">Saldo Saldo Stok (Pcs)</th>
+                        <th class="p-3 text-center">Status</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100 dark:divide-gray-700 text-gray-700 dark:text-gray-300">
+                    <% stokKue.forEach(item => { %>
+                        <tr class="hover:bg-gray-50/40 dark:hover:bg-gray-900/40 transition duration-150">
+                            <td class="p-3 font-medium capitalize">
+                                <span class="inline-block w-2 h-2 rounded-full mr-1.5 <%= item.rasa==='pedas'?'bg-red-500':'bg-green-500' %>"></span>
+                                <%= item.rasa %>
+                            </td>
+                            <td class="p-3 capitalize"><%= item.ukuran %></td>
+                            <td class="p-3 text-right font-bold text-sm <%= item.stok_sekarang === 0 ? 'text-red-500' : 'text-gray-900 dark:text-white' %>">
+                                <%= item.stok_sekarang %> Pcs
+                            </td>
+                            <td class="p-3 text-center">
+                                <% if (item.stok_sekarang === 0) { %>
+                                    <span class="inline-block text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-700 dark:bg-red-950/30 dark:text-red-400">Kosong</span>
+                                <% } else if (item.stok_sekarang <= 50) { %>
+                                    <span class="inline-block text-[10px] font-bold px-2 py-0.5 rounded-full bg-yellow-100 text-yellow-700 dark:bg-yellow-950/30 dark:text-yellow-400">Menipis</span>
+                                <% } else { %>
+                                    <span class="inline-block text-[10px] font-bold px-2 py-0.5 rounded-full bg-green-100 text-green-700 dark:bg-green-950/30 dark:text-green-400">Aman</span>
+                                <% } %>
+                            </td>
+                        </tr>
+                    <% }) %>
+                </tbody>
+            </table>
+        </div>
+    </div>
 </div>
 <%- include('layouts/footer') %>

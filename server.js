@@ -1,6 +1,6 @@
 const express = require('express');
 const session = require('express-session');
-const bcrypt = require('bcryptjs'); // Menggunakan bcryptjs agar aman dan lancar di Windows
+const bcrypt = require('bcryptjs'); 
 const path = require('path');
 const db = require('./config/db');
 const isAuthenticated = require('./middleware/auth');
@@ -90,11 +90,18 @@ app.get('/logout', (req, res) => {
 
 app.get('/', isAuthenticated, (req, res) => res.redirect('/dashboard'));
 
-app.get('/dashboard', isAuthenticated, (req, res) => {
-    res.render('dashboard');
+// Dashboard: Menampilkan Tabel Monitoring Saldo Stok Kue Real-time
+app.get('/dashboard', isAuthenticated, async (req, res) => {
+    try {
+        const [stokKue] = await db.query('SELECT rasa, ukuran, stok_sekarang FROM stok_kue ORDER BY rasa ASC, ukuran ASC');
+        res.render('dashboard', { stokKue });
+    } catch (err) {
+        console.error("🔥 Gagal memuat ringkasan stok di dashboard:", err);
+        res.status(500).send("Gagal memuat halaman dashboard.");
+    }
 });
 
-// 1. Input & Tampilkan Rencana Produksi (CRUD)
+// 1. Input Rencana Produksi (Otomatis Menambah Saldo Stok Kue)
 app.get('/produksi', isAuthenticated, async (req, res) => {
     try {
         const hariIni = new Date().toLocaleDateString('fr-CA'); 
@@ -111,25 +118,45 @@ app.get('/produksi', isAuthenticated, async (req, res) => {
 
 app.post('/produksi', isAuthenticated, async (req, res) => {
     const { jumlah_kg, jumlah_kue, rasa, ukuran, tanggal_produksi } = req.body;
+    const connection = await db.getConnection(); // Menggunakan Transaksi Database demi akurasi stok
     try {
+        await connection.beginTransaction();
+
         const itemsQty = Array.isArray(jumlah_kue) ? jumlah_kue : [jumlah_kue];
         const itemsRasa = Array.isArray(rasa) ? rasa : [rasa];
         const itemsUkuran = Array.isArray(ukuran) ? ukuran : [ukuran];
 
         for (let i = 0; i < itemsQty.length; i++) {
-            await db.query(
+            // A. Ambil nilai kuantitas
+            const qty = parseInt(itemsQty[i]);
+            const rsa = itemsRasa[i];
+            const ukr = itemsUkuran[i];
+
+            // B. Masukkan data log produksi ke database
+            await connection.query(
                 'INSERT INTO produksi (user_id, jumlah_kg, jumlah_kue, rasa, ukuran, tanggal_produksi) VALUES (?, ?, ?, ?, ?, ?)',
-                [req.session.userId, jumlah_kg, itemsQty[i], itemsRasa[i], itemsUkuran[i], tanggal_produksi]
+                [req.session.userId, jumlah_kg, qty, rsa, ukr, tanggal_produksi]
+            );
+
+            // C. TAMBAHKAN SALDO STOK KUE KE TABEL MASTER STOK
+            await connection.query(
+                'INSERT INTO stok_kue (rasa, ukuran, stok_sekarang) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE stok_sekarang = stok_sekarang + ?',
+                [rsa, ukr, qty, qty]
             );
         }
+
+        await connection.commit();
         res.redirect('/produksi?status=produksuccess');
     } catch (err) {
-        console.error("🔥 Gagal menyimpan data produksi:", err);
+        await connection.rollback();
+        console.error("🔥 Gagal menyimpan data produksi dan stok:", err);
         res.redirect('/produksi?status=produksifailed');
+    } finally {
+        connection.release();
     }
 });
 
-// Update Data Item Produksi (U dalam CRUD Produksi)
+// Update Data Item Produksi
 app.post('/produksi/update/:id', isAuthenticated, async (req, res) => {
     const { jumlah_kg, jumlah_kue, rasa, ukuran, tanggal_produksi } = req.body;
     try {
@@ -144,7 +171,7 @@ app.post('/produksi/update/:id', isAuthenticated, async (req, res) => {
     }
 });
 
-// Hapus Data Item Produksi (D dalam CRUD Produksi)
+// Hapus Data Item Produksi
 app.get('/produksi/delete/:id', isAuthenticated, async (req, res) => {
     try {
         await db.query('DELETE FROM produksi WHERE id = ? AND user_id = ?', [req.params.id, req.session.userId]);
@@ -155,39 +182,80 @@ app.get('/produksi/delete/:id', isAuthenticated, async (req, res) => {
     }
 });
 
-// 2. Input Pesanan Masuk (Menyimpan user_id penginput)
+// 2. Input Pesanan Masuk (Validasi Stok & Otomatis Mengurangi Saldo Stok Kue)
 app.get('/pesanan', isAuthenticated, (req, res) => {
     res.render('pesanan');
 });
 
 app.post('/pesanan', isAuthenticated, async (req, res) => {
     const { nama_pemesan, tanggal_kirim, jumlah_kue, rasa, ukuran, is_frozen } = req.body;
+    const connection = await db.getConnection();
     try {
-        const [resultMaster] = await db.query(
-            'INSERT INTO pesanan (user_id, nama_pemesan, tanggal_kirim) VALUES (?, ?, ?)',
-            [req.session.userId, nama_pemesan, tanggal_kirim]
-        );
-        const insertIdMaster = resultMaster.insertId;
+        await connection.beginTransaction();
 
         const itemsQty = Array.isArray(jumlah_kue) ? jumlah_kue : [jumlah_kue];
         const itemsRasa = Array.isArray(rasa) ? rasa : [rasa];
         const itemsUkuran = Array.isArray(ukuran) ? ukuran : [ukuran];
         const itemsFrozen = Array.isArray(is_frozen) ? is_frozen : [is_frozen];
 
+        // --- VALIDASI STOK PERTAMA: Cek ketersediaan seluruh item pesanan ---
         for (let i = 0; i < itemsQty.length; i++) {
+            const qtyDibutuhkan = parseInt(itemsQty[i]);
+            const rsa = itemsRasa[i];
+            const ukr = itemsUkuran[i];
+
+            const [stokCheck] = await connection.query(
+                'SELECT stok_sekarang FROM stok_kue WHERE rasa = ? AND ukuran = ?',
+                [rsa, ukr]
+            );
+
+            const stokTersedia = stokCheck.length > 0 ? stokCheck[0].stok_sekarang : 0;
+
+            if (stokTersedia < qtyDibutuhkan) {
+                // Jika stok tidak mencukupi, gagalkan transaksi dan kirim alert notifikasi
+                await connection.rollback();
+                return res.redirect('/pesanan?status=stockinsufficient');
+            }
+        }
+
+        // --- EKSEKUSI: Jika stok aman, potong saldo stok dan buat nota pesanan ---
+        const [resultMaster] = await connection.query(
+            'INSERT INTO pesanan (user_id, nama_pemesan, tanggal_kirim) VALUES (?, ?, ?)',
+            [req.session.userId, nama_pemesan, tanggal_kirim]
+        );
+        const insertIdMaster = resultMaster.insertId;
+
+        for (let i = 0; i < itemsQty.length; i++) {
+            const qty = parseInt(itemsQty[i]);
+            const rsa = itemsRasa[i];
+            const ukr = itemsUkuran[i];
             const frozenVal = itemsFrozen[i] === '1' ? 1 : 0;
-            await db.query(
+
+            // Simpan detail item pesanan
+            await connection.query(
                 'INSERT INTO pesanan_detail (pesanan_id, jumlah_kue, rasa, ukuran, is_frozen) VALUES (?, ?, ?, ?, ?)',
-                [insertIdMaster, itemsQty[i], itemsRasa[i], itemsUkuran[i], frozenVal]
+                [insertIdMaster, qty, rsa, ukr, frozenVal]
+            );
+
+            // KURANGI SALDO STOK KUE KARENA SUDAH TERPESAN
+            await connection.query(
+                'UPDATE stok_kue SET stok_sekarang = stok_sekarang - ? WHERE rasa = ? AND ukuran = ?',
+                [qty, rsa, ukr]
             );
         }
+
+        await connection.commit();
         res.redirect('/pesanan?status=pesanansuccess');
     } catch (err) {
+        await connection.rollback();
+        console.error("🔥 Gagal memproses data pesanan:", err);
         res.redirect('/pesanan?status=pesananfailed');
+    } finally {
+        connection.release();
     }
 });
 
-// 3. Manage Pesanan (Hanya mengambil pesanan milik user_id yang login)
+// 3. Manage Pesanan 
 app.get('/manage-pesanan', isAuthenticated, async (req, res) => {
     try {
         const [orders] = await db.query(`
@@ -245,7 +313,7 @@ app.get('/pesanan/delete/:id', isAuthenticated, async (req, res) => {
     }
 });
 
-// 4. History Pesanan & Produksi Terkelompok dengan Filter Tanggal dan Cari Nama Pemesan
+// 4. History Pesanan & Produksi Terkelompok
 app.get('/history', isAuthenticated, async (req, res) => {
     const filterTanggal = req.query.tanggal || '';
     const cariNama = req.query.nama || '';
@@ -260,8 +328,9 @@ app.get('/history', isAuthenticated, async (req, res) => {
             JOIN pesanan_detail pd ON p.id = pd.pesanan_id
             WHERE p.user_id = ?`;
             
-        let queryProduksi = `SELECT id, jumlah_kg, jumlah_kue, rasa, ukuran, tanggal_produksi FROM produksi WHERE user_id = ?`;
-        
+        let queryProduksi = `SELECT id, jumlah_kg, jumlah_kue, rasa, ukuran, tanggal_produksi FROM_SET produksi WHERE user_id = ?`;
+        let queryProduksiFix = queryProduksi.replace('FROM_SET', 'FROM');
+
         if (cariNama) {
             queryOrders += ' AND p.nama_pemesan LIKE ?';
             paramsOrders.push(`%${cariNama}%`);
@@ -269,18 +338,17 @@ app.get('/history', isAuthenticated, async (req, res) => {
 
         if (filterTanggal) {
             queryOrders += ' AND p.tanggal_kirim = ?';
-            queryProduksi += ' AND tanggal_produksi = ?';
+            queryProduksiFix += ' AND tanggal_produksi = ?';
             paramsOrders.push(filterTanggal);
             paramsProduksi.push(filterTanggal);
         }
         
         queryOrders += ' ORDER BY p.tanggal_kirim DESC, p.nama_pemesan ASC';
-        queryProduksi += ' ORDER BY tanggal_produksi DESC, jumlah_kg DESC';
+        queryProduksiFix += ' ORDER BY tanggal_produksi DESC, jumlah_kg DESC';
         
         const [rowsOrders] = await db.query(queryOrders, paramsOrders);
-        const [rowsProduksi] = await db.query(queryProduksi, paramsProduksi);
+        const [rowsProduksi] = await db.query(queryProduksiFix, paramsProduksi);
         
-        // ================= LOGIKA GROUPING LOG PESANAN =================
         const groupedOrdersMap = {};
         rowsOrders.forEach(row => {
             const tglString = new Date(row.tanggal_kirim).toLocaleDateString('fr-CA');
@@ -304,12 +372,9 @@ app.get('/history', isAuthenticated, async (req, res) => {
         });
         const orders = Object.values(groupedOrdersMap);
 
-        // ================= LOGIKA GROUPING LOG PRODUKSI (MUTLAK GABUNG BERDASARKAN HARI & KG) =================
         const groupedProduksiMap = {};
         rowsProduksi.forEach(row => {
             const tglString = new Date(row.tanggal_produksi).toLocaleDateString('fr-CA');
-            
-            // Menggunakan kombinasi String tanggal dan parsing desimal presisi dari bobot Kg
             const uniqueKey = `${tglString}_${parseFloat(row.jumlah_kg).toFixed(2)}`;
             
             if (!groupedProduksiMap[uniqueKey]) {
