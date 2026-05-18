@@ -32,8 +32,14 @@ app.use((req, res, next) => {
 // ================= ROUTING AUTENTIKASI =================
 
 app.get('/login', (req, res) => {
-    if (req.session.userId) return res.redirect('/dashboard');
-    res.render('login');
+    try {
+        if (req.session.userId) return res.redirect('/dashboard');
+        res.render('login');
+    } catch (error) {
+        // Memaksa Render mencetak error rendering ejs jika ada masalah path folder
+        console.error("🔥 ERROR PADA GET LOGIN:", error);
+        res.status(500).send("Server Error di GET /login: " + error.message);
+    }
 });
 
 app.post('/login', async (req, res) => {
@@ -55,7 +61,9 @@ app.post('/login', async (req, res) => {
         req.session.email = user.email;
         res.redirect('/dashboard?status=loginsuccess');
     } catch (err) {
-        res.status(500).send("Server Error");
+        // Memaksa Render mencetak error database secara detail di tab Logs
+        console.error("🔥 ERROR PADA POST LOGIN DATABASE:", err);
+        res.status(500).send("Server Error di POST /login: " + err.message);
     }
 });
 
