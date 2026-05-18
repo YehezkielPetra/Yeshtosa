@@ -1,151 +1,152 @@
 <%- include('layouts/header') %>
-<div class="max-w-4xl mx-auto bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-sm border dark:border-gray-700">
+<div class="max-w-5xl mx-auto bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-sm border dark:border-gray-700">
     <div class="flex items-center space-x-2 mb-6">
-        <span class="text-xl">📥</span>
-        <h3 class="text-xl font-bold font-serif">Input Pesanan Masuk</h3>
+        <span class="text-xl">🍳</span>
+        <h3 class="text-xl font-bold font-serif">Input Kebutuhan Produksi Masak</h3>
     </div>
     
-    <form action="/pesanan" method="POST" class="space-y-6">
-        <div>
-            <label class="block text-sm font-medium text-gray-600 dark:text-gray-300 mb-1">Nama Pemesan</label>
-            <input type="text" name="nama_pemesan" required class="w-full p-3 bg-gray-50 dark:bg-gray-700 rounded-xl border border-gray-200 dark:border-gray-600 focus:outline-none">
+    <form action="/produksi" method="POST" class="space-y-6">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-600 dark:text-gray-300 mb-1">Tanggal Jadwal Masak</label>
+                <input type="date" name="tanggal_produksi" required class="w-full p-3 bg-gray-50 dark:bg-gray-700 rounded-xl border border-gray-200 dark:border-gray-600 font-medium text-gray-900 dark:text-white">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-600 dark:text-gray-300 mb-1">Masak Berapa? (Total Kg)</label>
+                <input type="number" step="0.01" name="jumlah_kg" required placeholder="Contoh: 20" class="w-full p-3 bg-gray-50 dark:bg-gray-700 rounded-xl border border-gray-200 dark:border-gray-600 font-medium text-gray-900 dark:text-white">
+            </div>
         </div>
 
         <hr class="dark:border-gray-700">
+        
+        <div class="hidden md:grid grid-cols-12 gap-4 px-4 text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
+            <div class="col-span-4">Jumlah Gogos Jadi (Pcs)</div>
+            <div class="col-span-4">Rasa Varian</div>
+            <div class="col-span-3">Ukuran Kue</div>
+            <div class="col-span-1 text-center">Aksi</div>
+        </div>
 
-        <div id="wrapper-item-kue" class="space-y-4">
-            <div class="item-kue-row p-4 bg-amber-50/40 dark:bg-gray-900/40 rounded-xl border border-dashed border-amber-200 dark:border-gray-700 relative">
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div>
-                        <label class="block text-xs font-semibold text-gray-500 mb-1">Jumlah Order</label>
-                        <input type="number" name="jumlah_kue" required class="w-full p-2.5 bg-white dark:bg-gray-700 rounded-lg border text-sm">
+        <div id="wrapper-produksi" class="space-y-3">
+            <div class="produksi-row p-4 bg-amber-50/40 dark:bg-gray-900/40 rounded-xl border border-gray-100 dark:border-gray-700">
+                <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
+                    <div class="col-span-1 md:col-span-4">
+                        <label class="block md:hidden text-xs font-semibold text-gray-500 mb-1">Jumlah Gogos Jadi (Pcs)</label>
+                        <input type="number" name="jumlah_kue" required placeholder="Contoh: 200" class="w-full p-2.5 bg-white dark:bg-gray-700 rounded-lg border dark:border-gray-600 text-sm text-gray-900 dark:text-white">
                     </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-gray-500 mb-1">Rasa</label>
-                        <select name="rasa" class="w-full p-2.5 bg-white dark:bg-gray-700 rounded-lg border text-sm">
+                    <div class="col-span-1 md:col-span-4">
+                        <label class="block md:hidden text-xs font-semibold text-gray-500 mb-1">Rasa</label>
+                        <select name="rasa" class="w-full p-2.5 bg-white dark:bg-gray-700 rounded-lg border dark:border-gray-600 text-sm text-gray-900 dark:text-white">
                             <option value="tidak pedas">Tidak Pedas</option>
                             <option value="pedas">Pedas</option>
                         </select>
                     </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-gray-500 mb-1">Ukuran</label>
-                        <select name="ukuran" class="w-full p-2.5 bg-white dark:bg-gray-700 rounded-lg border text-sm">
+                    <div class="col-span-1 md:col-span-3">
+                        <label class="block md:hidden text-xs font-semibold text-gray-500 mb-1">Ukuran Kue</label>
+                        <select name="ukuran" class="w-full p-2.5 bg-white dark:bg-gray-700 rounded-lg border dark:border-gray-600 text-sm text-gray-900 dark:text-white">
                             <option value="kecil">Kecil</option>
                             <option value="besar">Besar</option>
                             <option value="jumbo">Jumbo</option>
                         </select>
                     </div>
-                </div>
-                <div class="flex items-center justify-between mt-3">
-                    <div class="flex items-center space-x-2">
-                        <input type="hidden" name="is_frozen" value="0" id="frozen_hidden_0">
-                        <input type="checkbox" onchange="handleFrozenCheckbox(this, 0)" class="w-4 h-4 text-kue-brand rounded focus:ring-kue-brand">
-                        <label class="text-xs text-gray-600 dark:text-gray-400 font-medium">Kondisi Frozen (Beku)</label>
+                    <div class="col-span-1 md:col-span-1 text-right md:text-center">
+                        <button type="button" onclick="hapusBarisProduksi(this)" class="text-xs text-red-500 font-semibold hover:underline hidden btn-hapus-prod md:mt-0 mt-1">Hapus</button>
                     </div>
-                    <button type="button" onclick="hapusBarisItem(this)" class="text-xs text-red-500 font-semibold hover:underline hidden btn-hapus-row">Hapus Item</button>
                 </div>
             </div>
         </div>
 
-        <button type="button" onclick="tambahBarisItem()" class="w-full py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 text-gray-700 dark:text-gray-200 text-xs font-bold rounded-xl transition border border-dashed border-gray-300 dark:border-gray-600">
-            + Tambah Pesanan
+        <button type="button" onclick="tambahBarisProduksi()" class="w-full py-2.5 bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 text-xs font-bold rounded-xl transition border border-dashed border-gray-300 dark:border-gray-600">
+            + Tambah Pembagian Varian Kue dari Adonan Ini
         </button>
 
-        <hr class="dark:border-gray-700">
-
-        <div>
-            <label class="block text-sm font-medium text-gray-600 dark:text-gray-300 mb-2">Pesanan untuk kapan?</label>
-            <div class="flex space-x-3">
-                <button type="button" onclick="setKirimHariIni()" id="btnKirimHariIni" class="flex-1 py-2 rounded-lg text-sm font-semibold border transition">Hari Ini</button>
-                <button type="button" onclick="setKirimNanti()" id="btnKirimNanti" class="flex-1 py-2 rounded-lg text-sm font-semibold border transition">Kemudian Hari</button>
-            </div>
-            <input type="date" id="tanggal_kirim" name="tanggal_kirim" required class="w-full mt-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-xl border">
-        </div>
-
-        <button type="submit" class="w-full py-3 bg-kue-brand hover:bg-kue-brandHover text-white font-bold rounded-xl shadow-sm transition">Simpan Semua Invoice Pesanan</button>
+        <button type="submit" class="w-full py-3 bg-kue-brand hover:bg-kue-brandHover text-white font-bold rounded-xl shadow-sm transition">Simpan Semua Rencana Rilis Produksi</button>
     </form>
+
+    <div class="mt-10 pt-6 border-t border-gray-100 dark:border-gray-700">
+        <div class="flex items-center space-x-2 mb-4">
+            <span>📋</span>
+            <h4 class="text-base font-bold font-serif text-gray-800 dark:text-gray-200">Log Produksi Masak Hari Ini</h4>
+        </div>
+        
+        <% if (produksiHariIni && produksiHariIni.length > 0) { %>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-xs border-collapse">
+                    <thead>
+                        <tr class="bg-gray-50 dark:bg-gray-900 text-gray-500 dark:text-gray-400 font-semibold uppercase tracking-wider border-b dark:border-gray-700">
+                            <th class="p-3">Porsi Masak</th>
+                            <th class="p-3">Hasil Jadi</th>
+                            <th class="p-3">Varian Rasa</th>
+                            <th class="p-3">Ukuran</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100 dark:divide-gray-700 text-gray-700 dark:text-gray-300">
+                        <% produksiHariIni.forEach(item => { %>
+                            <tr class="hover:bg-gray-50/50 dark:hover:bg-gray-900/50">
+                                <td class="p-3 font-medium"><%= item.jumlah_kg %> Kg</td>
+                                <td class="p-3"><%= item.jumlah_kue %> Pcs</td>
+                                <td class="p-3">
+                                    <span class="px-2 py-0.5 rounded text-[10px] font-bold <%= item.rasa === 'pedas' ? 'bg-red-50 text-red-600 dark:bg-red-950/30 dark:text-red-400' : 'bg-green-50 text-green-600 dark:bg-green-950/30 dark:text-green-400' %>">
+                                        <%= item.rasa.toUpperCase() %>
+                                    </span>
+                                </td>
+                                <td class="p-3 capitalize"><%= item.ukuran %></td>
+                            </tr>
+                        <% }) %>
+                    </tbody>
+                </table>
+            </div>
+        <% } else { %>
+            <p class="text-gray-400 dark:text-gray-500 text-xs italic py-2">Belum ada adonan rilis masak yang diinput khusus hari ini.</p>
+        <% } %>
+    </div>
 </div>
 
 <script>
-    let rowIndex = 1;
-
-    function tambahBarisItem() {
-        const wrapper = document.getElementById('wrapper-item-kue');
+    function tambahBarisProduksi() {
+        const wrapper = document.getElementById('wrapper-produksi');
         const newRow = document.createElement('div');
-        newRow.className = "item-kue-row p-4 bg-amber-50/40 dark:bg-gray-900/40 rounded-xl border border-dashed border-amber-200 dark:border-gray-700 relative animate-fade-in";
+        newRow.className = "produksi-row p-4 bg-amber-50/40 dark:bg-gray-900/40 rounded-xl border border-gray-100 dark:border-gray-700 transition duration-150";
         newRow.innerHTML = `
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div>
-                    <label class="block text-xs font-semibold text-gray-500 mb-1">Jumlah Order</label>
-                    <input type="number" name="jumlah_kue" required class="w-full p-2.5 bg-white dark:bg-gray-700 rounded-lg border text-sm">
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
+                <div class="col-span-1 md:col-span-4">
+                    <input type="number" name="jumlah_kue" required class="w-full p-2.5 bg-white dark:bg-gray-700 rounded-lg border dark:border-gray-600 text-sm text-gray-900 dark:text-white">
                 </div>
-                <div>
-                    <label class="block text-xs font-semibold text-gray-500 mb-1">Rasa</label>
-                    <select name="rasa" class="w-full p-2.5 bg-white dark:bg-gray-700 rounded-lg border text-sm">
+                <div class="col-span-1 md:col-span-4">
+                    <select name="rasa" class="w-full p-2.5 bg-white dark:bg-gray-700 rounded-lg border dark:border-gray-600 text-sm text-gray-900 dark:text-white">
                         <option value="tidak pedas">Tidak Pedas</option>
                         <option value="pedas">Pedas</option>
                     </select>
                 </div>
-                <div>
-                    <label class="block text-xs font-semibold text-gray-500 mb-1">Ukuran</label>
-                    <select name="ukuran" class="w-full p-2.5 bg-white dark:bg-gray-700 rounded-lg border text-sm">
+                <div class="col-span-1 md:col-span-3">
+                    <select name="ukuran" class="w-full p-2.5 bg-white dark:bg-gray-700 rounded-lg border dark:border-gray-600 text-sm text-gray-900 dark:text-white">
                         <option value="kecil">Kecil</option>
                         <option value="besar">Besar</option>
                         <option value="jumbo">Jumbo</option>
                     </select>
                 </div>
-            </div>
-            <div class="flex items-center justify-between mt-3">
-                <div class="flex items-center space-x-2">
-                    <input type="hidden" name="is_frozen" value="0" id="frozen_hidden_${rowIndex}">
-                    <input type="checkbox" onchange="handleFrozenCheckbox(this, ${rowIndex})" class="w-4 h-4 text-kue-brand rounded focus:ring-kue-brand">
-                    <label class="text-xs text-gray-600 dark:text-gray-400 font-medium">Kondisi Frozen (Beku)</label>
+                <div class="col-span-1 md:col-span-1 text-right md:text-center">
+                    <button type="button" onclick="hapusBarisProduksi(this)" class="text-xs text-red-500 font-semibold hover:underline btn-hapus-prod">Hapus</button>
                 </div>
-                <button type="button" onclick="hapusBarisItem(this)" class="text-xs text-red-500 font-semibold hover:underline btn-hapus-row">Hapus Item</button>
             </div>
         `;
         wrapper.appendChild(newRow);
-        rowIndex++;
-        toggleHapusButtonVisibility();
+        toggleHapusProdVisibility();
     }
 
-    function hapusBarisItem(button) {
-        button.closest('.item-kue-row').remove();
-        toggleHapusButtonVisibility();
+    function hapusBarisProduksi(button) {
+        button.closest('.produksi-row').remove();
+        toggleHapusProdVisibility();
     }
 
-    function toggleHapusButtonVisibility() {
-        const rows = document.querySelectorAll('.item-kue-row');
-        rows.forEach((row, index) => {
-            const btn = row.querySelector('.btn-hapus-row');
+    function toggleHapusProdVisibility() {
+        const rows = document.querySelectorAll('.produksi-row');
+        rows.forEach(row => {
+            const btn = row.querySelector('.btn-hapus-prod');
             if (btn) {
                 if (rows.length === 1) btn.classList.add('hidden');
                 else btn.classList.remove('hidden');
             }
         });
     }
-
-    function handleFrozenCheckbox(checkbox, index) {
-        document.getElementById(`frozen_hidden_${index}`).value = checkbox.checked ? "1" : "0";
-    }
-
-    // Tanggal Kirim Toggle Script
-    const inputTgl = document.getElementById('tanggal_kirim');
-    const bHariIni = document.getElementById('btnKirimHariIni');
-    const bNanti = document.getElementById('btnKirimNanti');
-
-    function setKirimHariIni() {
-        inputTgl.value = new Date().toISOString().split('T')[0];
-        inputTgl.readOnly = true;
-        bHariIni.className = "flex-1 py-2 rounded-lg text-sm font-semibold bg-kue-brand text-white border-kue-brand";
-        bNanti.className = "flex-1 py-2 rounded-lg text-sm font-semibold bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 border-transparent";
-    }
-    function setKirimNanti() {
-        inputTgl.value = "";
-        inputTgl.readOnly = false;
-        bHariIni.className = "flex-1 py-2 rounded-lg text-sm font-semibold bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 border-transparent";
-        bNanti.className = "flex-1 py-2 rounded-lg text-sm font-semibold bg-kue-brand text-white border-kue-brand";
-    }
-    setKirimHariIni();
 </script>
 <%- include('layouts/footer') %>
