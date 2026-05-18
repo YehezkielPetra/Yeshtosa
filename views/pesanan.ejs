@@ -1,0 +1,151 @@
+<%- include('layouts/header') %>
+<div class="max-w-4xl mx-auto bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-sm border dark:border-gray-700">
+    <div class="flex items-center space-x-2 mb-6">
+        <span class="text-xl">📥</span>
+        <h3 class="text-xl font-bold font-serif">Input Pesanan Masuk</h3>
+    </div>
+    
+    <form action="/pesanan" method="POST" class="space-y-6">
+        <div>
+            <label class="block text-sm font-medium text-gray-600 dark:text-gray-300 mb-1">Nama Pemesan</label>
+            <input type="text" name="nama_pemesan" required class="w-full p-3 bg-gray-50 dark:bg-gray-700 rounded-xl border border-gray-200 dark:border-gray-600 focus:outline-none">
+        </div>
+
+        <hr class="dark:border-gray-700">
+
+        <div id="wrapper-item-kue" class="space-y-4">
+            <div class="item-kue-row p-4 bg-amber-50/40 dark:bg-gray-900/40 rounded-xl border border-dashed border-amber-200 dark:border-gray-700 relative">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-500 mb-1">Jumlah Order</label>
+                        <input type="number" name="jumlah_kue" required class="w-full p-2.5 bg-white dark:bg-gray-700 rounded-lg border text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-500 mb-1">Rasa</label>
+                        <select name="rasa" class="w-full p-2.5 bg-white dark:bg-gray-700 rounded-lg border text-sm">
+                            <option value="tidak pedas">Tidak Pedas</option>
+                            <option value="pedas">Pedas</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-500 mb-1">Ukuran</label>
+                        <select name="ukuran" class="w-full p-2.5 bg-white dark:bg-gray-700 rounded-lg border text-sm">
+                            <option value="kecil">Kecil</option>
+                            <option value="besar">Besar</option>
+                            <option value="jumbo">Jumbo</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="flex items-center justify-between mt-3">
+                    <div class="flex items-center space-x-2">
+                        <input type="hidden" name="is_frozen" value="0" id="frozen_hidden_0">
+                        <input type="checkbox" onchange="handleFrozenCheckbox(this, 0)" class="w-4 h-4 text-kue-brand rounded focus:ring-kue-brand">
+                        <label class="text-xs text-gray-600 dark:text-gray-400 font-medium">Kondisi Frozen (Beku)</label>
+                    </div>
+                    <button type="button" onclick="hapusBarisItem(this)" class="text-xs text-red-500 font-semibold hover:underline hidden btn-hapus-row">Hapus Item</button>
+                </div>
+            </div>
+        </div>
+
+        <button type="button" onclick="tambahBarisItem()" class="w-full py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 text-gray-700 dark:text-gray-200 text-xs font-bold rounded-xl transition border border-dashed border-gray-300 dark:border-gray-600">
+            + Tambah Pesanan
+        </button>
+
+        <hr class="dark:border-gray-700">
+
+        <div>
+            <label class="block text-sm font-medium text-gray-600 dark:text-gray-300 mb-2">Pesanan untuk kapan?</label>
+            <div class="flex space-x-3">
+                <button type="button" onclick="setKirimHariIni()" id="btnKirimHariIni" class="flex-1 py-2 rounded-lg text-sm font-semibold border transition">Hari Ini</button>
+                <button type="button" onclick="setKirimNanti()" id="btnKirimNanti" class="flex-1 py-2 rounded-lg text-sm font-semibold border transition">Kemudian Hari</button>
+            </div>
+            <input type="date" id="tanggal_kirim" name="tanggal_kirim" required class="w-full mt-3 p-3 bg-gray-50 dark:bg-gray-700 rounded-xl border">
+        </div>
+
+        <button type="submit" class="w-full py-3 bg-kue-brand hover:bg-kue-brandHover text-white font-bold rounded-xl shadow-sm transition">Simpan Semua Invoice Pesanan</button>
+    </form>
+</div>
+
+<script>
+    let rowIndex = 1;
+
+    function tambahBarisItem() {
+        const wrapper = document.getElementById('wrapper-item-kue');
+        const newRow = document.createElement('div');
+        newRow.className = "item-kue-row p-4 bg-amber-50/40 dark:bg-gray-900/40 rounded-xl border border-dashed border-amber-200 dark:border-gray-700 relative animate-fade-in";
+        newRow.innerHTML = `
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div>
+                    <label class="block text-xs font-semibold text-gray-500 mb-1">Jumlah Order</label>
+                    <input type="number" name="jumlah_kue" required class="w-full p-2.5 bg-white dark:bg-gray-700 rounded-lg border text-sm">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-500 mb-1">Rasa</label>
+                    <select name="rasa" class="w-full p-2.5 bg-white dark:bg-gray-700 rounded-lg border text-sm">
+                        <option value="tidak pedas">Tidak Pedas</option>
+                        <option value="pedas">Pedas</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-500 mb-1">Ukuran</label>
+                    <select name="ukuran" class="w-full p-2.5 bg-white dark:bg-gray-700 rounded-lg border text-sm">
+                        <option value="kecil">Kecil</option>
+                        <option value="besar">Besar</option>
+                        <option value="jumbo">Jumbo</option>
+                    </select>
+                </div>
+            </div>
+            <div class="flex items-center justify-between mt-3">
+                <div class="flex items-center space-x-2">
+                    <input type="hidden" name="is_frozen" value="0" id="frozen_hidden_${rowIndex}">
+                    <input type="checkbox" onchange="handleFrozenCheckbox(this, ${rowIndex})" class="w-4 h-4 text-kue-brand rounded focus:ring-kue-brand">
+                    <label class="text-xs text-gray-600 dark:text-gray-400 font-medium">Kondisi Frozen (Beku)</label>
+                </div>
+                <button type="button" onclick="hapusBarisItem(this)" class="text-xs text-red-500 font-semibold hover:underline btn-hapus-row">Hapus Item</button>
+            </div>
+        `;
+        wrapper.appendChild(newRow);
+        rowIndex++;
+        toggleHapusButtonVisibility();
+    }
+
+    function hapusBarisItem(button) {
+        button.closest('.item-kue-row').remove();
+        toggleHapusButtonVisibility();
+    }
+
+    function toggleHapusButtonVisibility() {
+        const rows = document.querySelectorAll('.item-kue-row');
+        rows.forEach((row, index) => {
+            const btn = row.querySelector('.btn-hapus-row');
+            if (btn) {
+                if (rows.length === 1) btn.classList.add('hidden');
+                else btn.classList.remove('hidden');
+            }
+        });
+    }
+
+    function handleFrozenCheckbox(checkbox, index) {
+        document.getElementById(`frozen_hidden_${index}`).value = checkbox.checked ? "1" : "0";
+    }
+
+    // Tanggal Kirim Toggle Script
+    const inputTgl = document.getElementById('tanggal_kirim');
+    const bHariIni = document.getElementById('btnKirimHariIni');
+    const bNanti = document.getElementById('btnKirimNanti');
+
+    function setKirimHariIni() {
+        inputTgl.value = new Date().toISOString().split('T')[0];
+        inputTgl.readOnly = true;
+        bHariIni.className = "flex-1 py-2 rounded-lg text-sm font-semibold bg-kue-brand text-white border-kue-brand";
+        bNanti.className = "flex-1 py-2 rounded-lg text-sm font-semibold bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 border-transparent";
+    }
+    function setKirimNanti() {
+        inputTgl.value = "";
+        inputTgl.readOnly = false;
+        bHariIni.className = "flex-1 py-2 rounded-lg text-sm font-semibold bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-200 border-transparent";
+        bNanti.className = "flex-1 py-2 rounded-lg text-sm font-semibold bg-kue-brand text-white border-kue-brand";
+    }
+    setKirimHariIni();
+</script>
+<%- include('layouts/footer') %>

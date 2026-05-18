@@ -1,0 +1,20 @@
+<%- include('layouts/header') %>
+<div class="max-w-md mx-auto bg-white dark:bg-gray-800 rounded-2xl p-8 border dark:border-gray-700 shadow-sm text-center">
+    <div class="w-24 h-24 bg-amber-100 dark:bg-amber-900/30 text-kue-brand rounded-full flex items-center justify-center text-3xl font-serif font-bold mx-auto mb-4">
+        <%= username.charAt(0).toUpperCase() %>
+    </div>
+    <h3 class="text-xl font-bold text-gray-900 dark:text-white"><%= username %></h3>
+    <p class="text-sm text-gray-500 dark:text-gray-400"><%= email %></p>
+    <div class="border-t dark:border-gray-700 my-6 pt-4 text-left space-y-2">
+        <div class="flex justify-between text-xs">
+            <span class="text-gray-400">Hak Akses Jabatan:</span>
+            <span class="font-bold text-green-600">Administrator Utama Toko</span>
+        </div>
+        <div class="flex justify-between text-xs">
+            <span class="text-gray-400">Status Sistem Keamanan:</span>
+            <span class="font-bold text-blue-500">Bcrypt Terenkripsi Aktif</span>
+        </div>
+    </div>
+    <a href="/logout" class="block w-full py-2.5 bg-red-500 hover:bg-red-600 text-white rounded-xl font-semibold text-sm transition">Keluar dari Sesi (Logout)</a>
+</div>
+<%- include('layouts/footer') %>

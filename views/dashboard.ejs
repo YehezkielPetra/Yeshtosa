@@ -1,0 +1,19 @@
+<%- include('layouts/header') %>
+<div class="text-center my-8">
+    <h2 class="text-2xl font-serif font-bold">Selamat Datang Admin, <%= username %>!</h2>
+    <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">Silakan pilih menu manajemen aktivitas toko kue hari ini.</p>
+</div>
+
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto mt-10">
+    <a href="/produksi" class="block p-6 bg-white dark:bg-gray-800 border dark:border-gray-700 hover:border-kue-brand dark:hover:border-kue-brand rounded-2xl shadow-sm transition group">
+        <span class="text-4xl block mb-3">🍳</span>
+        <h3 class="text-lg font-bold group-hover:text-kue-brand transition">1. Input Jumlah yang Perlu Dimasak</h3>
+        <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">Kelola kebutuhan bahan baku memasak, kalkulasi berat (kg), takaran ukuran porsi, serta varian tingkat kepedasan rasa kue.</p>
+    </a>
+    <a href="/pesanan" class="block p-6 bg-white dark:bg-gray-800 border dark:border-gray-700 hover:border-kue-brand dark:hover:border-kue-brand rounded-2xl shadow-sm transition group">
+        <span class="text-4xl block mb-3">📥</span>
+        <h3 class="text-lg font-bold group-hover:text-kue-brand transition">2. Input Data Pesanan Masuk</h3>
+        <p class="text-xs text-gray-500 dark:text-gray-400 mt-2">Pencatatan invoice pesanan pelanggan baru secara instan, konfigurasi pengemasan paket frozen, serta tanggal pengiriman dinamis.</p>
+    </a>
+</div>
+<%- include('layouts/footer') %>

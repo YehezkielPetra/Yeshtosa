@@ -1,0 +1,72 @@
+<%- include('layouts/header') %>
+<h2 class="text-xl font-bold font-serif mb-6 text-gray-800 dark:text-white">Kelola Rincian Pesanan Multi-Item Aktif</h2>
+
+<div class="overflow-x-auto bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700">
+    <table class="w-full text-left border-collapse text-sm">
+        <thead>
+            <tr class="border-b dark:border-gray-700 bg-gray-50 dark:bg-gray-900 text-gray-700 dark:text-gray-300">
+                <th class="p-4">Pemesan</th>
+                <th class="p-4">Spesifikasi Detail Kue</th>
+                <th class="p-4">Tanggal Kirim</th>
+                <th class="p-4">Status Bayar</th>
+                <th class="p-4 text-center">Modifikasi Pesanan</th>
+            </tr>
+        </thead>
+        <tbody class="divide-y dark:divide-gray-700 text-gray-600 dark:text-gray-300">
+            <% if (orders.length === 0) { %>
+                <tr><td colspan="5" class="p-4 text-center text-gray-400">Tidak ada pesanan aktif tersedia.</td></tr>
+            <% } %>
+            <% orders.forEach(order => { %>
+                <tr>
+                    <td class="p-4 font-bold text-gray-900 dark:text-white">
+                        <%= order.nama_pemesan %>
+                    </td>
+                    
+                    <td class="p-4">
+                        <div class="flex items-center space-x-1">
+                            <input type="number" form="form-update-<%= order.detail_id %>" name="jumlah_kue" value="<%= order.jumlah_kue %>" class="w-16 p-1 text-center bg-gray-50 dark:bg-gray-700 rounded border dark:border-gray-600 text-gray-900 dark:text-white">
+                            <span>Pcs, </span>
+                            <select form="form-update-<%= order.detail_id %>" name="rasa" class="p-1 bg-gray-50 dark:bg-gray-700 rounded border dark:border-gray-600 text-xs text-gray-900 dark:text-white">
+                                <option value="tidak pedas" <%= order.rasa==='tidak pedas'?'selected':'' %>>Tidak Pedas</option>
+                                <option value="pedas" <%= order.rasa==='pedas'?'selected':'' %>>Pedas</option>
+                            </select>
+                            <select form="form-update-<%= order.detail_id %>" name="ukuran" class="p-1 bg-gray-50 dark:bg-gray-700 rounded border dark:border-gray-600 text-xs text-gray-900 dark:text-white">
+                                <option value="kecil" <%= order.ukuran==='kecil'?'selected':'' %>>Kecil</option>
+                                <option value="besar" <%= order.ukuran==='besar'?'selected':'' %>>Besar</option>
+                                <option value="jumbo" <%= order.ukuran==='jumbo'?'selected':'' %>>Jumbo</option>
+                            </select>
+                        </div>
+                        <% if(order.is_frozen) { %>
+                            <div class="mt-1">
+                                <span class="inline-block text-[10px] bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 font-bold px-2 py-0.5 rounded">📦 FROZEN STATE</span>
+                            </div>
+                        <% } %>
+                    </td>
+                    
+                    <td class="p-4">
+                        <input type="date" form="form-update-<%= order.detail_id %>" name="tanggal_kirim" value="<%= order.tanggal_kirim.toISOString().split('T')[0] %>" class="p-1 bg-gray-50 dark:bg-gray-700 rounded border dark:border-gray-600 text-xs text-gray-900 dark:text-white">
+                    </td>
+                    
+                    <td class="p-4">
+                        <form action="/pesanan/status/<%= order.id %>" method="POST" class="inline">
+                            <select name="status_bayar" onchange="this.form.submit()" class="p-2 rounded-xl font-semibold text-xs border cursor-pointer dark:border-gray-600
+                                <%= order.status_bayar === 'sudah bayar' ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400' : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400' %>">
+                                <option value="belum bayar" <%= order.status_bayar==='belum bayar'?'selected':'' %>>❌ Belum Bayar</option>
+                                <option value="sudah bayar" <%= order.status_bayar==='sudah bayar'?'selected':'' %>>✅ Sudah Bayar</option>
+                            </select>
+                        </form>
+                    </td>
+                    
+                    <td class="p-4 text-center space-x-1">
+                        <form id="form-update-<%= order.detail_id %>" action="/pesanan/update/<%= order.detail_id %>" method="POST" class="inline">
+                            <input type="hidden" name="pesanan_id" value="<%= order.id %>">
+                            <button type="submit" class="bg-amber-500 hover:bg-amber-600 text-white px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors">Simpan Edit</button>
+                        </form>
+                        <button type="button" onclick="pemicuKonfirmasiHapus('<%= order.detail_id %>')" class="bg-red-500 hover:bg-red-600 text-white px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors">Hapus</button>
+                    </td>
+                </tr>
+            <% }) %>
+        </tbody>
+    </table>
+</div>
+<%- include('layouts/footer') %>

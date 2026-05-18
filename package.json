@@ -1,0 +1,21 @@
+{
+  "name": "toko-kue-admin",
+  "version": "1.0.0",
+  "description": "Admin Management System Toko Kue",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "build:css": "npx tailwindcss -i ./public/css/style.css -o ./public/css/output.css --watch"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "dotenv": "^16.4.5",
+    "ejs": "^3.1.10",
+    "express": "^4.19.2",
+    "express-session": "^1.18.0",
+    "mysql2": "^3.9.7"
+  },
+  "devDependencies": {
+    "tailwindcss": "^3.4.19"
+  }
+}

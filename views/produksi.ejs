@@ -1,0 +1,107 @@
+<%- include('layouts/header') %>
+<div class="max-w-4xl mx-auto bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-sm border dark:border-gray-700">
+    <div class="flex items-center space-x-2 mb-6">
+        <span class="text-xl">🍳</span>
+        <h3 class="text-xl font-bold font-serif">Input Kebutuhan Produksi Masak</h3>
+    </div>
+    
+    <form action="/produksi" method="POST" class="space-y-6">
+        <div>
+            <label class="block text-sm font-medium text-gray-600 dark:text-gray-300 mb-1">Tanggal Jadwal Masak</label>
+            <input type="date" name="tanggal_produksi" required class="w-full p-3 bg-gray-50 dark:bg-gray-700 rounded-xl border border-gray-200 dark:border-gray-600">
+        </div>
+
+        <hr class="dark:border-gray-700">
+        <div id="wrapper-produksi" class="space-y-4">
+            <div class="produksi-row p-4 bg-amber-50/40 dark:bg-gray-900/40 rounded-xl border border-dashed border-amber-200 dark:border-gray-700">
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-500 mb-1">Masak Berapa?</label>
+                        <input type="number" step="0.01" name="jumlah_kg" required class="w-full p-2.5 bg-white dark:bg-gray-700 rounded-lg border text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-500 mb-1">Jumlah Gogos Jadi (Pcs)</label>
+                        <input type="number" name="jumlah_kue" required class="w-full p-2.5 bg-white dark:bg-gray-700 rounded-lg border text-sm">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-500 mb-1">Rasa</label>
+                        <select name="rasa" class="w-full p-2.5 bg-white dark:bg-gray-700 rounded-lg border text-sm">
+                            <option value="tidak pedas">Tidak Pedas</option>
+                            <option value="pedas">Pedas</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-500 mb-1">Ukuran Kue</label>
+                        <select name="ukuran" class="w-full p-2.5 bg-white dark:bg-gray-700 rounded-lg border text-sm">
+                            <option value="kecil">Kecil</option>
+                            <option value="besar">Besar</option>
+                            <option value="jumbo">Jumbo</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="text-right mt-2">
+                    <button type="button" onclick="hapusBarisProduksi(this)" class="text-xs text-red-500 font-semibold hover:underline hidden btn-hapus-prod">Hapus Baris</button>
+                </div>
+            </div>
+        </div>
+
+        <button type="button" onclick="tambahBarisProduksi()" class="w-full py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 text-gray-700 dark:text-gray-200 text-xs font-bold rounded-xl transition border border-dashed border-gray-300 dark:border-gray-600">
+            + Tambah
+        </button>
+
+        <button type="submit" class="w-full py-3 bg-kue-brand hover:bg-kue-brandHover text-white font-bold rounded-xl shadow-sm transition">Simpan Semua Rencana Rilis Produksi</button>
+    </form>
+</div>
+
+<script>
+    function tambahBarisProduksi() {
+        const wrapper = document.getElementById('wrapper-produksi');
+        const newRow = document.createElement('div');
+        newRow.className = "produksi-row p-4 bg-amber-50/40 dark:bg-gray-900/40 rounded-xl border border-dashed border-amber-200 dark:border-gray-700 animate-fade-in";
+        newRow.innerHTML = `
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div>
+                    <input type="number" step="0.01" name="jumlah_kg" required class="w-full p-2.5 bg-white dark:bg-gray-700 rounded-lg border text-sm">
+                </div>
+                <div>
+                    <input type="number" name="jumlah_kue" required class="w-full p-2.5 bg-white dark:bg-gray-700 rounded-lg border text-sm">
+                </div>
+                <div>
+                    <select name="rasa" class="w-full p-2.5 bg-white dark:bg-gray-700 rounded-lg border text-sm">
+                        <option value="tidak pedas">Tidak Pedas</option>
+                        <option value="pedas">Pedas</option>
+                    </select>
+                </div>
+                <div>
+                    <select name="ukuran" class="w-full p-2.5 bg-white dark:bg-gray-700 rounded-lg border text-sm">
+                        <option value="kecil">Kecil</option>
+                        <option value="besar">Besar</option>
+                        <option value="jumbo">Jumbo</option>
+                    </select>
+                </div>
+            </div>
+            <div class="text-right mt-2">
+                <button type="button" onclick="hapusBarisProduksi(this)" class="text-xs text-red-500 font-semibold hover:underline btn-hapus-prod">Hapus Baris</button>
+            </div>
+        `;
+        wrapper.appendChild(newRow);
+        toggleHapusProdVisibility();
+    }
+
+    function hapusBarisProduksi(button) {
+        button.closest('.produksi-row').remove();
+        toggleHapusProdVisibility();
+    }
+
+    function toggleHapusProdVisibility() {
+        const rows = document.querySelectorAll('.produksi-row');
+        rows.forEach(row => {
+            const btn = row.querySelector('.btn-hapus-prod');
+            if (btn) {
+                if (rows.length === 1) btn.classList.add('hidden');
+                else btn.classList.remove('hidden');
+            }
+        });
+    }
+</script>
+<%- include('layouts/footer') %>

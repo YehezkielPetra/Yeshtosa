@@ -1,0 +1,107 @@
+<% if (status) { %>
+    <% 
+        let title = "Gagal membuat tugas";
+        let message = "Terjadi kendala saat memproses permintaan Anda ke server.";
+        let isSuccess = true;
+        let colorTheme = "indigo"; // Default button color dari gambar baru (Ungu Indigo)
+
+        // Pemetaan Logika Pesan Berdasarkan Status URL Parameter
+        if (status === 'usernotfound') {
+            title = "Gagal Masuk";
+            message = "User tidak ditemukan. Periksa kembali username atau email Anda.";
+            isSuccess = false;
+        } else if (status === 'wrongpassword') {
+            title = "Akses Ditolak";
+            message = "Password yang Anda masukkan salah. Silakan coba lagi.";
+            isSuccess = false;
+        } else if (status === 'registersuccess') {
+            title = "Registrasi Berhasil";
+            message = "Akun Admin baru berhasil dibuat! Silakan masuk.";
+            isSuccess = true;
+        } else if (status === 'registerfailed') {
+            title = "Registrasi Gagal";
+            message = "Username atau Email sudah terdaftar di sistem database.";
+            isSuccess = false;
+        } else if (status === 'loginsuccess') {
+            title = "Berhasil Masuk";
+            message = "Selamat Datang kembali! Sesi manajemen admin kini aktif.";
+            isSuccess = true;
+        } else if (status === 'logoutsuccess') {
+            title = "Berhasil Keluar";
+            message = "Sesi Anda telah berakhir. Terima kasih dan selamat bekerja kembali!";
+            isSuccess = true;
+        } else if (status === 'produksuccess') {
+            title = "Produksi Disimpan";
+            message = "Rencana jumlah adonan kue yang dimasak berhasil dimasukkan.";
+            isSuccess = true;
+        } else if (status === 'pesanansuccess') {
+            title = "Pesanan Dicatat";
+            message = "Invoice order pelanggan baru berhasil disimpan ke database.";
+            isSuccess = true;
+        } else if (status === 'updatesuccess') {
+            title = "Data Diperbarui";
+            message = "Perubahan spesifikasi data order kue berhasil disimpan.";
+            isSuccess = true;
+        } else if (status === 'deletesuccess') {
+            title = "Pesanan Dihapus";
+            message = "Data pesanan terpilih telah dihapus secara permanen.";
+            isSuccess = true;
+        } else if (status === 'produksifailed' || status === 'pesananfailed' || status === 'updatefailed' || status === 'deletefailed') {
+            title = "Gagal memproses data";
+            message = "Gagal memproses manipulasi data ke database MySQL.";
+            isSuccess = false;
+        }
+    %>
+
+    <div id="customPopupModal" class="fixed inset-0 z-[99999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-[2px] transition-opacity duration-300">
+        
+        <div class="bg-white dark:bg-gray-800 rounded-lg w-full max-w-lg p-10 shadow-2xl text-center transform scale-100 transition-transform duration-300 flex flex-col items-center justify-center">
+            
+            <div class="mb-6 flex items-center justify-center">
+                <% if (isSuccess) { %>
+                    <svg class="w-24 h-24 text-green-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                        <circle cx="12" cy="12" r="10" stroke="currentColor"></circle>
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"></path>
+                    </svg>
+                <% } else { %>
+                    <svg class="w-24 h-24 text-red-400" fill="none" stroke="currentColor" stroke-width="1.2" viewBox="0 0 24 24">
+                        <circle cx="12" cy="12" r="10" stroke="currentColor"></circle>
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                <% } %>
+            </div>
+
+            <h3 class="text-2xl font-sans font-semibold text-gray-700 dark:text-gray-100 mb-2 tracking-tight">
+                <%= title %>
+            </h3>
+            
+            <p class="text-sm text-gray-400 dark:text-gray-400 font-light max-w-sm mb-6 leading-relaxed">
+                <%= message %>
+            </p>
+
+            <button onclick="closeCustomPopup()" class="px-6 py-2 bg-[#6366F1] hover:bg-[#4F46E5] text-white font-medium rounded text-sm transition-all shadow-md focus:outline-none min-w-[70px]">
+                OK
+            </button>
+        </div>
+    </div>
+
+    <script>
+        function closeCustomPopup() {
+            const modal = document.getElementById('customPopupModal');
+            if (modal) {
+                modal.classList.add('opacity-0');
+                setTimeout(() => {
+                    modal.remove();
+                    // Bersihkan jejak parameter URL kueri agar pop-up tidak muncul lagi saat di-refresh
+                    const cleanUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
+                    window.history.replaceState({path: cleanUrl}, '', cleanUrl);
+                }, 200);
+            }
+        }
+
+        // Penutupan otomatis opsional pengaman sistem (aktif setelah 4 detik)
+        setTimeout(() => {
+            closeCustomPopup();
+        }, 4000);
+    </script>
+<% } %>

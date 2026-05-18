@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Toko Kue - Login Admin</title>
+    <link href="/css/output.css" rel="stylesheet">
+    <script src="/js/theme.js"></script>
+</head>
+<body class="bg-kue-light dark:bg-gray-900 min-h-screen flex flex-col justify-center items-center font-sans p-4 transition-colors duration-300">
+    
+    <%- include('layouts/popup') %>
+
+    <button onclick="toggleTheme()" class="absolute top-4 right-4 bg-white dark:bg-gray-800 p-2 rounded-full shadow-md text-sm">🌓 Mode</button>
+
+    <div class="text-center mb-6">
+        <span class="text-4xl">🎂</span>
+        <h1 class="text-3xl font-serif font-bold text-kue-brand mt-2">Toko Kue</h1>
+        <p class="text-sm text-gray-500 dark:text-gray-400 font-light tracking-wide">Admin Management System</p>
+    </div>
+
+    <div class="bg-white dark:bg-gray-800 border border-amber-100 dark:border-gray-700 w-full max-w-md rounded-2xl p-8 shadow-sm">
+        <h2 class="text-xl font-serif font-bold text-gray-900 dark:text-white mb-6">Masuk</h2>
+        
+        <form action="/login" method="POST" class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium text-gray-600 dark:text-gray-300 mb-1">Username / Email</label>
+                <input type="text" name="username" placeholder="Masukkan username" required
+                    class="w-full px-4 py-3 bg-kue-input dark:bg-gray-700 border-none rounded-xl text-gray-800 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-kue-brand text-sm">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-600 dark:text-gray-300 mb-1">Password</label>
+                <div class="relative">
+                    <input type="password" id="password" name="password" placeholder="Masukkan password" required
+                        class="w-full px-4 py-3 bg-kue-input dark:bg-gray-700 border-none rounded-xl text-gray-800 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-kue-brand text-sm pr-10">
+                    <button type="button" onclick="togglePwd()" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">👁️</button>
+                </div>
+            </div>
+            <button type="submit" class="w-full py-3 bg-kue-brand hover:bg-kue-brandHover text-white font-medium rounded-xl shadow-sm transition-colors text-sm mt-2">Masuk</button>
+        </form>
+        <p class="text-center text-xs text-gray-600 dark:text-gray-400 mt-6">
+            Belum punya akun? <a href="/register" class="text-kue-brand font-medium hover:underline">Daftar sekarang</a>
+        </p>
+    </div>
+    <script>
+        function togglePwd() {
+            const p = document.getElementById('password');
+            p.type = p.type === 'password' ? 'text' : 'password';
+        }
+    </script>
+</body>
+</html>

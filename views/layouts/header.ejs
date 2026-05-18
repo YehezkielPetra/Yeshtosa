@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Yeshtosa Admin Dashboard</title>
+    <link href="/css/output.css" rel="stylesheet">
+    <script src="/js/theme.js"></script>
+</head>
+<body class="bg-[#FDFBF7] dark:bg-gray-950 min-h-screen font-sans text-gray-800 dark:text-gray-100 transition-colors duration-300">
+    
+    <div class="relative z-[1000000]">
+        <%- include('popup') %>
+
+        <div id="modalKonfirmasiHapus" class="fixed inset-0 hidden flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm transition-opacity duration-300">
+            <div class="bg-white dark:bg-gray-800 rounded-lg w-full max-w-lg p-10 shadow-2xl text-center flex flex-col items-center justify-center border border-gray-100 dark:border-gray-700">
+                <div class="mb-6 flex items-center justify-center">
+                    <svg class="w-24 h-24 text-amber-500" fill="none" stroke="currentColor" stroke-width="1.2" viewBox="0 0 24 24">
+                        <circle cx="12" cy="12" r="10" stroke="currentColor"></circle>
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v4m0 4h.01m-4.01-4a4 4 0 118 0 4 4 0 01-8 0z"></path>
+                    </svg>
+                </div>
+                <h3 class="text-2xl font-sans font-semibold text-gray-700 dark:text-gray-100 mb-2 tracking-tight">
+                    Apakah anda yakin ingin membatalkan pesanan ini?
+                </h3>
+                <p class="text-sm text-gray-400 dark:text-gray-400 font-light max-w-sm mb-6 leading-relaxed">
+                    Tindakan ini tidak dapat dibatalkan dan data pesanan akan dihapus permanen dari sistem.
+                </p>
+                <div class="flex space-x-3 w-full justify-center">
+                    <button type="button" onclick="tutupKonfirmasiHapus()" class="px-6 py-2 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-200 font-medium rounded text-sm transition-all shadow-sm">
+                        Cancel
+                    </button>
+                    <a id="tautanHapusSistem" href="#" class="px-6 py-2 bg-[#6366F1] hover:bg-[#4F46E5] text-white font-medium rounded text-sm transition-all shadow-md flex items-center justify-center min-w-[70px]">
+                        OK
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="sidebarMobile" class="fixed inset-0 z-[9999] hidden">
+        <div onclick="toggleSidebar()" class="absolute inset-0 bg-black/50 backdrop-blur-sm"></div>
+        
+        <div class="absolute inset-y-0 left-0 w-64 bg-white dark:bg-gray-900 shadow-2xl flex flex-col justify-between p-6 transform transition-transform duration-300">
+            <div class="space-y-6">
+                <div class="flex items-center justify-between border-b dark:border-gray-800 pb-4">
+                    <div class="flex items-center space-x-2">
+                        <span class="text-xl">🎂</span>
+                        <span class="font-serif font-bold text-xl text-[#C8743E]">Yeshtosa</span>
+                    </div>
+                    <button onclick="toggleSidebar()" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 focus:outline-none">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"></path></svg>
+                    </button>
+                </div>
+
+                <nav class="flex flex-col space-y-2">
+                    <a href="/produksi" class="flex items-center space-x-3 p-3 rounded-xl hover:bg-amber-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-200 font-medium transition-colors">
+                        <span>🍳</span> <span>Input Produksi</span>
+                    </a>
+                    <a href="/pesanan" class="flex items-center space-x-3 p-3 rounded-xl hover:bg-amber-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-200 font-medium transition-colors">
+                        <span>📥</span> <span>Input Pesanan</span>
+                    </a>
+                    <a href="/manage-pesanan" class="flex items-center space-x-3 p-3 rounded-xl hover:bg-amber-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-200 font-medium transition-colors">
+                        <span>📋</span> <span>Manage Pesanan</span>
+                    </a>
+                    <a href="/history" class="flex items-center space-x-3 p-3 rounded-xl hover:bg-amber-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-200 font-medium transition-colors">
+                        <span>📊</span> <span>History</span>
+                    </a>
+                    <a href="/profile" class="flex items-center space-x-3 p-3 rounded-xl hover:bg-amber-50 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-200 font-medium transition-colors">
+                        <span>👤</span> <span>Profile</span>
+                    </a>
+                </nav>
+            </div>
+
+            <div class="border-t dark:border-gray-800 pt-4 space-y-3">
+                <button onclick="toggleTheme()" class="w-full flex items-center justify-center space-x-2 bg-gray-100 dark:bg-gray-800 p-2.5 rounded-xl text-sm transition-colors">
+                    <span>🌓</span> <span>Ganti Mode Tema</span>
+                </button>
+                <a href="/logout" class="block w-full text-center bg-red-500 hover:bg-red-600 text-white text-sm font-semibold py-2.5 rounded-xl transition-colors">
+                    Logout
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <nav class="bg-white dark:bg-gray-900 shadow-sm border-b border-gray-100 dark:border-gray-800 sticky top-0 z-10">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                
+                <div class="flex items-center md:hidden">
+                    <button onclick="toggleSidebar()" class="p-2 rounded-lg text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 focus:outline-none">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16"></path>
+                        </svg>
+                    </button>
+                </div>
+
+                <div class="flex items-center space-x-2">
+                    <span class="text-2xl hidden sm:inline">🎂</span>
+                    <a href="/dashboard" class="font-serif font-bold text-xl text-[#C8743E]">Yeshtosa</a>
+                </div>
+
+                <div class="hidden md:flex space-x-4 text-sm font-medium">
+                    <a href="/produksi" class="hover:text-[#C8743E] px-3 py-2 transition-colors">Input Produksi</a>
+                    <a href="/pesanan" class="hover:text-[#C8743E] px-3 py-2 transition-colors">Input Pesanan</a>
+                    <a href="/manage-pesanan" class="hover:text-[#C8743E] px-3 py-2 transition-colors">Manage Pesanan</a>
+                    <a href="/history" class="hover:text-[#C8743E] px-3 py-2 transition-colors">History</a>
+                    <a href="/profile" class="hover:text-[#C8743E] px-3 py-2 transition-colors">Profile</a>
+                </div>
+
+                <div class="hidden md:flex items-center space-x-2">
+                    <button onclick="toggleTheme()" class="bg-gray-100 dark:bg-gray-800 p-2 rounded-full text-sm hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors">🌓</button>
+                    <a href="/logout" class="bg-red-500 hover:bg-red-600 text-white text-xs px-3 py-2 rounded-lg transition-colors">Logout</a>
+                </div>
+
+                <div class="flex items-center md:hidden">
+                    <span class="text-xs bg-amber-50 dark:bg-gray-800 text-[#C8743E] px-2.5 py-1 rounded-full font-semibold tracking-wide">ADMIN</span>
+                </div>
+
+            </div>
+        </div>
+    </nav>
+
+    <script>
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebarMobile');
+            if (sidebar) {
+                if (sidebar.classList.contains('hidden')) {
+                    sidebar.classList.remove('hidden');
+                    document.body.classList.add('overflow-hidden');
+                } else {
+                    sidebar.classList.add('hidden');
+                    document.body.classList.remove('overflow-hidden');
+                }
+            }
+        }
+
+        function pemicuKonfirmasiHapus(orderId) {
+            const modalHapus = document.getElementById('modalKonfirmasiHapus');
+            const tautanHapus = document.getElementById('tautanHapusSistem');
+            if (modalHapus && tautanHapus) {
+                tautanHapus.href = `/pesanan/delete/${orderId}`;
+                modalHapus.classList.remove('hidden');
+            }
+        }
+
+        function tutupKonfirmasiHapus() {
+            const modalHapus = document.getElementById('modalKonfirmasiHapus');
+            if (modalHapus) {
+                modalHapus.classList.add('hidden');
+            }
+        }
+
+        window.addEventListener('click', function(event) {
+            const modalHapus = document.getElementById('modalKonfirmasiHapus');
+            if (event.target == modalHapus) {
+                tutupKonfirmasiHapus();
+            }
+        });
+    </script>
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">

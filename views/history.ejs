@@ -1,0 +1,34 @@
+<%- include('layouts/header') %>
+<div class="flex flex-col md:flex-row md:items-center md:justify-between mb-6 gap-4">
+    <h2 class="text-xl font-bold font-serif">Riwayat Log Historis Pesanan</h2>
+    <form action="/history" method="GET" class="flex items-center space-x-2">
+        <label class="text-sm font-medium text-gray-600 dark:text-gray-400">Filter Hari:</label>
+        <input type="date" name="tanggal" value="<%= filterTanggal %>" class="p-2 bg-white dark:bg-gray-800 rounded-xl border dark:border-gray-700 text-sm">
+        <button type="submit" class="bg-kue-brand text-white px-4 py-2 rounded-xl text-sm font-medium">Saring</button>
+        <% if(filterTanggal) { %>
+            <a href="/history" class="bg-gray-300 text-gray-700 px-3 py-2 rounded-xl text-sm">Reset</a>
+        <% } %>
+    </form>
+</div>
+<div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border dark:border-gray-700 p-4">
+    <div class="space-y-3">
+        <% if(orders.length === 0) { %>
+            <p class="text-center text-gray-400 py-6 text-sm">Tidak ada rekaman transaksi log pada tanggal tersebut.</p>
+        <% } %>
+        <% orders.forEach(order => { %>
+            <div class="p-4 border dark:border-gray-700 rounded-xl flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+                <div>
+                    <h4 class="font-bold text-base"><%= order.nama_pemesan %></h4>
+                    <p class="text-xs text-gray-500 mt-1">Detail: <%= order.jumlah_kue %> unit / Rasa <%= order.rasa %> / Ukuran <%= order.ukuran %> <%= order.is_frozen ? '(Kondisi Frozen)':'' %></p>
+                </div>
+                <div class="text-left md:text-right">
+                    <span class="block text-xs font-semibold text-gray-400">Pengiriman: <%= order.tanggal_kirim.toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) %></span>
+                    <span class="inline-block text-[11px] font-bold mt-1 px-2 py-0.5 rounded-full <%= order.status_bayar==='sudah bayar'?'bg-green-100 text-green-700 dark:bg-green-900/20':'bg-red-100 text-red-700 dark:bg-red-900/20' %>">
+                        <%= order.status_bayar.toUpperCase() %>
+                    </span>
+                </div>
+            </div>
+        <% }) %>
+    </div>
+</div>
+<%- include('layouts/footer') %>
