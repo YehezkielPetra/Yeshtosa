@@ -94,7 +94,7 @@ app.get('/dashboard', isAuthenticated, (req, res) => {
     res.render('dashboard');
 });
 
-// 1. Input Jumlah Produksi (Hanya milik user login)
+// 1. Input & Tampilkan Rencana Produksi (CRUD)
 app.get('/produksi', isAuthenticated, async (req, res) => {
     try {
         const hariIni = new Date().toLocaleDateString('fr-CA'); 
@@ -112,21 +112,46 @@ app.get('/produksi', isAuthenticated, async (req, res) => {
 app.post('/produksi', isAuthenticated, async (req, res) => {
     const { jumlah_kg, jumlah_kue, rasa, ukuran, tanggal_produksi } = req.body;
     try {
-        const itemsKg = Array.isArray(jumlah_kg) ? jumlah_kg : [jumlah_kg];
         const itemsQty = Array.isArray(jumlah_kue) ? jumlah_kue : [jumlah_kue];
         const itemsRasa = Array.isArray(rasa) ? rasa : [rasa];
         const itemsUkuran = Array.isArray(ukuran) ? ukuran : [ukuran];
 
-        for (let i = 0; i < itemsKg.length; i++) {
+        for (let i = 0; i < itemsQty.length; i++) {
             await db.query(
                 'INSERT INTO produksi (user_id, jumlah_kg, jumlah_kue, rasa, ukuran, tanggal_produksi) VALUES (?, ?, ?, ?, ?, ?)',
-                [req.session.userId, itemsKg[i], itemsQty[i], itemsRasa[i], itemsUkuran[i], tanggal_produksi]
+                [req.session.userId, jumlah_kg, itemsQty[i], itemsRasa[i], itemsUkuran[i], tanggal_produksi]
             );
         }
         res.redirect('/produksi?status=produksuccess');
     } catch (err) {
         console.error("🔥 Gagal menyimpan data produksi:", err);
         res.redirect('/produksi?status=produksifailed');
+    }
+});
+
+// Update Data Item Produksi (U dalam CRUD Produksi)
+app.post('/produksi/update/:id', isAuthenticated, async (req, res) => {
+    const { jumlah_kg, jumlah_kue, rasa, ukuran, tanggal_produksi } = req.body;
+    try {
+        await db.query(
+            'UPDATE produksi SET jumlah_kg = ?, jumlah_kue = ?, rasa = ?, ukuran = ?, tanggal_produksi = ? WHERE id = ? AND user_id = ?',
+            [jumlah_kg, jumlah_kue, rasa, ukuran, tanggal_produksi, req.params.id, req.session.userId]
+        );
+        res.redirect('/produksi?status=updatesuccess');
+    } catch (err) {
+        console.error("🔥 Gagal memperbarui data produksi:", err);
+        res.redirect('/produksi?status=updatefailed');
+    }
+});
+
+// Hapus Data Item Produksi (D dalam CRUD Produksi)
+app.get('/produksi/delete/:id', isAuthenticated, async (req, res) => {
+    try {
+        await db.query('DELETE FROM produksi WHERE id = ? AND user_id = ?', [req.params.id, req.session.userId]);
+        res.redirect('/produksi?status=deletesuccess');
+    } catch (err) {
+        console.error("🔥 Gagal menghapus data produksi:", err);
+        res.redirect('/produksi?status=deletefailed');
     }
 });
 
@@ -162,9 +187,8 @@ app.post('/pesanan', isAuthenticated, async (req, res) => {
     }
 });
 
-// 3. Manage Pesanan (Mengambil kolom p.catatan milik user_id yang login)
+// 3. Manage Pesanan (Hanya mengambil pesanan milik user_id yang login)
 app.get('/manage-pesanan', isAuthenticated, async (req, res) => {
-    console.log("===> USER YANG SEDANG AKSES MANAGE PESANAN, ID-NYA ADALAH:", req.session.userId);
     try {
         const [orders] = await db.query(`
             SELECT p.id, p.nama_pemesan, p.tanggal_kirim, p.status_bayar, p.catatan,
@@ -195,10 +219,7 @@ app.post('/pesanan/status/:id', isAuthenticated, async (req, res) => {
 app.post('/pesanan/update/:id', isAuthenticated, async (req, res) => {
     const { jumlah_kue, rasa, ukuran, tanggal_kirim, pesanan_id, catatan } = req.body;
     try {
-        // Pembaruan tanggal kirim dan teks catatan di tabel master pesanan
         await db.query('UPDATE pesanan SET tanggal_kirim = ?, catatan = ? WHERE id = ? AND user_id = ?', [tanggal_kirim, catatan, pesanan_id, req.session.userId]);
-        
-        // Pembaruan rincian spesifikasi kue di tabel detail
         await db.query(
             'UPDATE pesanan_detail SET jumlah_kue = ?, rasa = ?, ukuran = ? WHERE id = ?',
             [jumlah_kue, rasa, ukuran, req.params.id]
@@ -224,7 +245,7 @@ app.get('/pesanan/delete/:id', isAuthenticated, async (req, res) => {
     }
 });
 
-// 4. History Pesanan (Agregasi Privat & Pengelompokan Data)
+// 4. History Pesanan & Produksi Terkelompok (Grouped) Lintas Akun Aman
 app.get('/history', isAuthenticated, async (req, res) => {
     const filterTanggal = req.query.tanggal || '';
     try {
@@ -238,9 +259,8 @@ app.get('/history', isAuthenticated, async (req, res) => {
             JOIN pesanan_detail pd ON p.id = pd.pesanan_id
             WHERE p.user_id = ?`;
             
-        let queryProduksi = `SELECT jumlah_kg, jumlah_kue, rasa, ukuran, tanggal_produksi, created_at FROM_SET produksi WHERE user_id = ?`;
-        queryProduksi = queryProduksi.replace('FROM_SET', 'FROM');
-
+        let queryProduksi = `SELECT id, jumlah_kg, jumlah_kue, rasa, ukuran, tanggal_produksi FROM produksi WHERE user_id = ?`;
+        
         if (filterTanggal) {
             queryOrders += ' AND p.tanggal_kirim = ?';
             queryProduksi += ' AND tanggal_produksi = ?';
@@ -249,13 +269,13 @@ app.get('/history', isAuthenticated, async (req, res) => {
         }
         
         queryOrders += ' ORDER BY p.tanggal_kirim DESC, p.nama_pemesan ASC';
-        queryProduksi += ' ORDER BY created_at DESC';
+        queryProduksi += ' ORDER BY tanggal_produksi DESC, jumlah_kg DESC';
         
         const [rowsOrders] = await db.query(queryOrders, paramsOrders);
-        const [productions] = await db.query(queryProduksi, paramsProduksi);
+        const [rowsProduksi] = await db.query(queryProduksi, paramsProduksi);
         
+        // ================= LOGIKA GROUPING LOG PESANAN =================
         const groupedOrdersMap = {};
-        
         rowsOrders.forEach(row => {
             const tglString = new Date(row.tanggal_kirim).toLocaleDateString('fr-CA');
             const uniqueKey = `${row.nama_pemesan.trim().toLowerCase()}_${tglString}`;
@@ -265,21 +285,41 @@ app.get('/history', isAuthenticated, async (req, res) => {
                     nama_pemesan: row.nama_pemesan,
                     tanggal_kirim: row.tanggal_kirim,
                     status_bayar: row.status_bayar,
-                    catatan: row.catatan, // Ambil catatan untuk dilempar ke EJS history
+                    catatan: row.catatan,
                     details: []
                 };
             }
-            
             groupedOrdersMap[uniqueKey].details.push({
-                detail_id: row.detail_id,
                 jumlah_kue: row.jumlah_kue,
                 rasa: row.rasa,
                 ukuran: row.ukuran,
                 is_frozen: row.is_frozen
             });
         });
-        
         const orders = Object.values(groupedOrdersMap);
+
+        // ================= LOGIKA GROUPING LOG PRODUKSI (GABUNG BERDASARKAN HARI & ADONAN KG YANG SAMA) =================
+        const groupedProduksiMap = {};
+        rowsProduksi.forEach(row => {
+            const tglString = new Date(row.tanggal_produksi).toLocaleDateString('fr-CA');
+            
+            // Satukan total Kg dan Hari sebagai kunci penentu agregasi kotak tunggal
+            const uniqueKey = `${tglString}_${parseFloat(row.jumlah_kg).toFixed(2)}`;
+            
+            if (!groupedProduksiMap[uniqueKey]) {
+                groupedProduksiMap[uniqueKey] = {
+                    jumlah_kg: row.jumlah_kg,
+                    tanggal_produksi: row.tanggal_produksi,
+                    details: []
+                };
+            }
+            groupedProduksiMap[uniqueKey].details.push({
+                jumlah_kue: row.jumlah_kue,
+                rasa: row.rasa,
+                ukuran: row.ukuran
+            });
+        });
+        const productions = Object.values(groupedProduksiMap);
         
         res.render('history', { orders, productions, filterTanggal });
     } catch (err) {

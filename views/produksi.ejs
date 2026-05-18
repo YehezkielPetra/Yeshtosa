@@ -1,85 +1,121 @@
 <%- include('layouts/header') %>
-<div class="max-w-4xl mx-auto bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-sm border dark:border-gray-700">
-    <div class="flex items-center space-x-2 mb-6">
-        <span class="text-xl">🍳</span>
-        <h3 class="text-xl font-bold font-serif">Input Kebutuhan Produksi Masak</h3>
-    </div>
+<div class="max-w-6xl mx-auto space-y-8">
     
-    <form action="/produksi" method="POST" class="space-y-6">
-        <div>
-            <label class="block text-sm font-medium text-gray-600 dark:text-gray-300 mb-1">Tanggal Jadwal Masak</label>
-            <input type="date" name="tanggal_produksi" required class="w-full p-3 bg-gray-50 dark:bg-gray-700 rounded-xl border border-gray-200 dark:border-gray-600">
+    <div class="bg-white dark:bg-gray-800 p-8 rounded-2xl shadow-sm border dark:border-gray-700">
+        <div class="flex items-center space-x-2 mb-6">
+            <span class="text-xl">🍳</span>
+            <h3 class="text-xl font-bold font-serif text-gray-800 dark:text-white">Input Kebutuhan Produksi Masak</h3>
         </div>
-
-        <hr class="dark:border-gray-700">
-        <div id="wrapper-produksi" class="space-y-4">
-            <div class="produksi-row p-4 bg-amber-50/40 dark:bg-gray-900/40 rounded-xl border border-dashed border-amber-200 dark:border-gray-700">
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <div>
-                        <label class="block text-xs font-semibold text-gray-500 mb-1">Masak Berapa?</label>
-                        <input type="number" step="0.01" name="jumlah_kg" required class="w-full p-2.5 bg-white dark:bg-gray-700 rounded-lg border text-sm">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-gray-500 mb-1">Jumlah Gogos Jadi (Pcs)</label>
-                        <input type="number" name="jumlah_kue" required class="w-full p-2.5 bg-white dark:bg-gray-700 rounded-lg border text-sm">
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-gray-500 mb-1">Rasa</label>
-                        <select name="rasa" class="w-full p-2.5 bg-white dark:bg-gray-700 rounded-lg border text-sm">
-                            <option value="tidak pedas">Tidak Pedas</option>
-                            <option value="pedas">Pedas</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-semibold text-gray-500 mb-1">Ukuran Kue</label>
-                        <select name="ukuran" class="w-full p-2.5 bg-white dark:bg-gray-700 rounded-lg border text-sm">
-                            <option value="kecil">Kecil</option>
-                            <option value="besar">Besar</option>
-                            <option value="jumbo">Jumbo</option>
-                        </select>
-                    </div>
+        
+        <form action="/produksi" method="POST" class="space-y-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-600 dark:text-gray-300 mb-1">Tanggal Jadwal Masak</label>
+                    <input type="date" name="tanggal_produksi" required class="w-full p-3 bg-gray-50 dark:bg-gray-700 rounded-xl border border-gray-200 dark:border-gray-600 font-medium text-gray-900 dark:text-white">
                 </div>
-                <div class="text-right mt-2">
-                    <button type="button" onclick="hapusBarisProduksi(this)" class="text-xs text-red-500 font-semibold hover:underline hidden btn-hapus-prod">Hapus Baris</button>
+                <div>
+                    <label class="block text-sm font-medium text-gray-600 dark:text-gray-300 mb-1">Masak Berapa? (Total Bahan Kg Adonan)</label>
+                    <input type="number" step="0.01" name="jumlah_kg" required placeholder="Contoh: 20" class="w-full p-3 bg-gray-50 dark:bg-gray-700 rounded-xl border border-gray-200 dark:border-gray-600 font-medium text-gray-900 dark:text-white">
                 </div>
             </div>
-        </div>
 
-        <button type="button" onclick="tambahBarisProduksi()" class="w-full py-2 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 text-gray-700 dark:text-gray-200 text-xs font-bold rounded-xl transition border border-dashed border-gray-300 dark:border-gray-600">
-            + Tambah
-        </button>
+            <hr class="dark:border-gray-700">
+            
+            <div class="hidden md:grid grid-cols-12 gap-4 px-4 text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
+                <div class="col-span-4">Jumlah Gogos Jadi (Pcs)</div>
+                <div class="col-span-4">Rasa Varian</div>
+                <div class="col-span-3">Ukuran Kue</div>
+                <div class="col-span-1 text-center">Aksi</div>
+            </div>
 
-        <button type="submit" class="w-full py-3 bg-kue-brand hover:bg-kue-brandHover text-white font-bold rounded-xl shadow-sm transition">Simpan Semua Rencana Rilis Produksi</button>
-    </form>
+            <div id="wrapper-produksi" class="space-y-3">
+                <div class="produksi-row p-4 bg-amber-50/40 dark:bg-gray-900/40 rounded-xl border border-gray-100 dark:border-gray-700">
+                    <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
+                        <div class="col-span-1 md:col-span-4">
+                            <label class="block md:hidden text-xs font-semibold text-gray-500 mb-1">Jumlah Gogos Jadi (Pcs)</label>
+                            <input type="number" name="jumlah_kue" required placeholder="Contoh: 200" class="w-full p-2.5 bg-white dark:bg-gray-700 rounded-lg border dark:border-gray-600 text-sm text-gray-900 dark:text-white">
+                        </div>
+                        <div class="col-span-1 md:col-span-4">
+                            <label class="block md:hidden text-xs font-semibold text-gray-500 mb-1">Rasa</label>
+                            <select name="rasa" class="w-full p-2.5 bg-white dark:bg-gray-700 rounded-lg border dark:border-gray-600 text-sm text-gray-900 dark:text-white">
+                                <option value="tidak pedas">Tidak Pedas</option>
+                                <option value="pedas">Pedas</option>
+                            </select>
+                        </div>
+                        <div class="col-span-1 md:col-span-3">
+                            <label class="block md:hidden text-xs font-semibold text-gray-500 mb-1">Ukuran Kue</label>
+                            <select name="ukuran" class="w-full p-2.5 bg-white dark:bg-gray-700 rounded-lg border dark:border-gray-600 text-sm text-gray-900 dark:text-white">
+                                <option value="kecil">Kecil</option>
+                                <option value="besar">Besar</option>
+                                <option value="jumbo">Jumbo</option>
+                            </select>
+                        </div>
+                        <div class="col-span-1 md:col-span-1 text-right md:text-center">
+                            <button type="button" onclick="hapusBarisProduksi(this)" class="text-xs text-red-500 font-semibold hover:underline hidden btn-hapus-prod">Hapus</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-    <div class="mt-10 pt-6 border-t border-gray-100 dark:border-gray-700">
+            <button type="button" onclick="tambahBarisProduksi()" class="w-full py-2.5 bg-gray-50 dark:bg-gray-700/50 hover:bg-gray-100 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 text-xs font-bold rounded-xl transition border border-dashed border-gray-300 dark:border-gray-600">
+                + Tambah Pembagian Varian Kue dari Adonan Ini
+            </button>
+
+            <button type="submit" class="w-full py-3 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-xl shadow-sm transition">Simpan Rencana Rilis Produksi</button>
+        </form>
+    </div>
+
+    <div class="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border dark:border-gray-700">
         <div class="flex items-center space-x-2 mb-4">
             <span>📋</span>
-            <h4 class="text-base font-bold font-serif text-gray-800 dark:text-gray-200">Log Produksi Masak Hari Ini</h4>
+            <h4 class="text-base font-bold font-serif text-gray-800 dark:text-gray-200">Manajemen Pembaruan Produksi Hari Ini</h4>
         </div>
         
         <% if (produksiHariIni && produksiHariIni.length > 0) { %>
             <div class="overflow-x-auto">
-                <table class="w-full text-left text-xs border-collapse">
+                <table class="w-full text-left text-sm border-collapse">
                     <thead>
-                        <tr class="bg-gray-50 dark:bg-gray-900 text-gray-500 dark:text-gray-400 font-semibold uppercase tracking-wider border-b dark:border-gray-700">
+                        <tr class="bg-gray-50 dark:bg-gray-900 text-gray-700 dark:text-gray-300 font-semibold border-b dark:border-gray-700">
                             <th class="p-3">Porsi Masak</th>
-                            <th class="p-3">Hasil Jadi</th>
+                            <th class="p-3">Hasil Jadi (Pcs)</th>
                             <th class="p-3">Varian Rasa</th>
                             <th class="p-3">Ukuran</th>
+                            <th class="p-3">Tanggal Jadwal</th>
+                            <th class="p-3 text-center">Modifikasi Aksi</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-gray-100 dark:divide-gray-700 text-gray-700 dark:text-gray-300">
                         <% produksiHariIni.forEach(item => { %>
-                            <tr class="hover:bg-gray-50/50 dark:hover:bg-gray-900/50">
-                                <td class="p-3 font-medium"><%= item.jumlah_kg %> Kg</td>
-                                <td class="p-3"><%= item.jumlah_kue %> Pcs</td>
+                            <tr class="align-middle hover:bg-gray-50/50 dark:hover:bg-gray-900/50">
                                 <td class="p-3">
-                                    <span class="px-2 py-0.5 rounded text-[10px] font-bold <%= item.rasa === 'pedas' ? 'bg-red-50 text-red-600 dark:bg-red-950/30 dark:text-red-400' : 'bg-green-50 text-green-600 dark:bg-green-950/30 dark:text-green-400' %>">
-                                        <%= item.rasa.toUpperCase() %>
-                                    </span>
+                                    <input type="number" step="0.01" form="form-prod-<%= item.id %>" name="jumlah_kg" value="<%= item.jumlah_kg %>" class="w-20 p-1 text-center bg-gray-50 dark:bg-gray-700 rounded border dark:border-gray-600 text-sm font-semibold">
+                                    <span class="text-xs font-bold text-gray-400">Kg</span>
                                 </td>
-                                <td class="p-3 capitalize"><%= item.ukuran %></td>
+                                <td class="p-3">
+                                    <input type="number" form="form-prod-<%= item.id %>" name="jumlah_kue" value="<%= item.jumlah_kue %>" class="w-20 p-1 text-center bg-gray-50 dark:bg-gray-700 rounded border dark:border-gray-600 text-sm">
+                                </td>
+                                <td class="p-3">
+                                    <select form="form-prod-<%= item.id %>" name="rasa" class="p-1 bg-gray-50 dark:bg-gray-700 rounded border dark:border-gray-600 text-xs">
+                                        <option value="tidak pedas" <%= item.rasa==='tidak pedas'?'selected':'' %>>Tidak Pedas</option>
+                                        <option value="pedas" <%= item.rasa==='pedas'?'selected':'' %>>Pedas</option>
+                                    </select>
+                                </td>
+                                <td class="p-3">
+                                    <select form="form-prod-<%= item.id %>" name="ukuran" class="p-1 bg-gray-50 dark:bg-gray-700 rounded border dark:border-gray-600 text-xs">
+                                        <option value="kecil" <%= item.ukuran==='kecil'?'selected':'' %>>Kecil</option>
+                                        <option value="besar" <%= item.ukuran==='besar'?'selected':'' %>>Besar</option>
+                                        <option value="jumbo" <%= item.ukuran==='jumbo'?'selected':'' %>>Jumbo</option>
+                                    </select>
+                                </td>
+                                <td class="p-3">
+                                    <input type="date" form="form-prod-<%= item.id %>" name="tanggal_produksi" value="<%= item.tanggal_produksi.toISOString().split('T')[0] %>" class="p-1 bg-gray-50 dark:bg-gray-700 rounded border dark:border-gray-600 text-xs">
+                                </td>
+                                <td class="p-3 text-center space-x-1 whitespace-nowrap">
+                                    <form id="form-prod-<%= item.id %>" action="/produksi/update/<%= item.id %>" method="POST" class="inline">
+                                        <button type="submit" class="bg-amber-500 hover:bg-amber-600 text-white px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-colors shadow-sm">Simpan</button>
+                                    </form>
+                                    <a href="/produksi/delete/<%= item.id %>" onclick="return confirm('Apakah Anda yakin ingin menghapus data produksi ini?')" class="inline-block bg-red-500 hover:bg-red-600 text-white px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-colors shadow-sm">Hapus</a>
+                                </td>
                             </tr>
                         <% }) %>
                     </tbody>
@@ -95,31 +131,28 @@
     function tambahBarisProduksi() {
         const wrapper = document.getElementById('wrapper-produksi');
         const newRow = document.createElement('div');
-        newRow.className = "produksi-row p-4 bg-amber-50/40 dark:bg-gray-900/40 rounded-xl border border-dashed border-amber-200 dark:border-gray-700 animate-fade-in";
+        newRow.className = "produksi-row p-4 bg-amber-50/40 dark:bg-gray-900/40 rounded-xl border border-gray-100 dark:border-gray-700 transition duration-150";
         newRow.innerHTML = `
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div>
-                    <input type="number" step="0.01" name="jumlah_kg" required class="w-full p-2.5 bg-white dark:bg-gray-700 rounded-lg border text-sm">
+            <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-center">
+                <div class="col-span-1 md:col-span-4">
+                    <input type="number" name="jumlah_kue" required placeholder="Contoh: 150" class="w-full p-2.5 bg-white dark:bg-gray-700 rounded-lg border dark:border-gray-600 text-sm text-gray-900 dark:text-white">
                 </div>
-                <div>
-                    <input type="number" name="jumlah_kue" required class="w-full p-2.5 bg-white dark:bg-gray-700 rounded-lg border text-sm">
-                </div>
-                <div>
-                    <select name="rasa" class="w-full p-2.5 bg-white dark:bg-gray-700 rounded-lg border text-sm">
+                <div class="col-span-1 md:col-span-4">
+                    <select name="rasa" class="w-full p-2.5 bg-white dark:bg-gray-700 rounded-lg border dark:border-gray-600 text-sm text-gray-900 dark:text-white">
                         <option value="tidak pedas">Tidak Pedas</option>
                         <option value="pedas">Pedas</option>
                     </select>
                 </div>
-                <div>
-                    <select name="ukuran" class="w-full p-2.5 bg-white dark:bg-gray-700 rounded-lg border text-sm">
+                <div class="col-span-1 md:col-span-3">
+                    <select name="ukuran" class="w-full p-2.5 bg-white dark:bg-gray-700 rounded-lg border dark:border-gray-600 text-sm text-gray-900 dark:text-white">
                         <option value="kecil">Kecil</option>
                         <option value="besar">Besar</option>
                         <option value="jumbo">Jumbo</option>
                     </select>
                 </div>
-            </div>
-            <div class="text-right mt-2">
-                <button type="button" onclick="hapusBarisProduksi(this)" class="text-xs text-red-500 font-semibold hover:underline btn-hapus-prod">Hapus Baris</button>
+                <div class="col-span-1 md:col-span-1 text-right md:text-center">
+                    <button type="button" onclick="hapusBarisProduksi(this)" class="text-xs text-red-500 font-semibold hover:underline btn-hapus-prod">Hapus</button>
+                </div>
             </div>
         `;
         wrapper.appendChild(newRow);
@@ -142,4 +175,4 @@
         });
     }
 </script>
-<%- include('layouts/footer') %>
+<%- include('layouts/header') %>
