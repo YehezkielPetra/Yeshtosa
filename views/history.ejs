@@ -11,9 +11,18 @@
     </form>
 </div>
 
-<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+<div class="flex space-x-2 mb-6 bg-gray-100 dark:bg-gray-900 p-1.5 rounded-2xl w-fit">
+    <button type="button" onclick="switchTab('pesanan')" id="tab-btn-pesanan" class="px-5 py-2.5 rounded-xl text-sm font-bold transition duration-200 bg-white dark:bg-gray-800 text-gray-800 dark:text-white shadow-sm">
+        📦 Log Pesanan
+    </button>
+    <button type="button" onclick="switchTab('produksi')" id="tab-btn-produksi" class="px-5 py-2.5 rounded-xl text-sm font-bold transition duration-200 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200">
+        🍳 Produksi Dapur
+    </button>
+</div>
+
+<div>
     
-    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border dark:border-gray-700 p-5">
+    <div id="content-tab-pesanan" class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border dark:border-gray-700 p-5">
         <div class="flex items-center space-x-2 mb-4 border-b dark:border-gray-700 pb-2">
             <span>📦</span>
             <h3 class="font-serif font-bold text-base text-gray-800 dark:text-gray-200">Log Transaksi Pesanan</h3>
@@ -26,9 +35,18 @@
                 <div class="p-4 border dark:border-gray-700 rounded-xl flex flex-col justify-between gap-2 bg-gray-50/30 dark:bg-gray-900/20">
                     <div>
                         <h4 class="font-bold text-sm text-gray-800 dark:text-gray-200"><%= order.nama_pemesan %></h4>
-                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Detail: <%= order.jumlah_kue %> Pcs / Rasa <%= order.rasa %> / Ukuran <%= order.ukuran %> <%= order.is_frozen ? '(Kondisi Frozen)':'' %></p>
+                        
+                        <div class="mt-2 space-y-1.5 pl-2 border-l-2 border-amber-300 dark:border-gray-600">
+                            <% if (order.details && order.details.length > 0) { %>
+                                <% order.details.forEach(detail => { %>
+                                    <p class="text-xs text-gray-600 dark:text-gray-400">
+                                        • <%= detail.jumlah_kue %> Pcs / Rasa <%= detail.rasa %> / Ukuran <%= detail.ukuran %> <%= detail.is_frozen ? '(Kondisi Frozen)':'' %>
+                                    </p>
+                                <% }) %>
+                            <% } %>
+                        </div>
                     </div>
-                    <div class="flex items-center justify-between mt-1 pt-2 border-t border-gray-100 dark:border-gray-700/50">
+                    <div class="flex items-center justify-between mt-2 pt-2 border-t border-gray-100 dark:border-gray-700/50">
                         <span class="block text-[11px] font-medium text-gray-400">Kirim: <%= order.tanggal_kirim.toLocaleDateString('id-ID', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' }) %></span>
                         <span class="inline-block text-[10px] font-bold px-2 py-0.5 rounded-full <%= order.status_bayar==='sudah bayar'?'bg-green-100 text-green-700 dark:bg-green-900/20':'bg-red-100 text-red-700 dark:bg-red-900/20' %>">
                             <%= order.status_bayar.toUpperCase() %>
@@ -39,7 +57,7 @@
         </div>
     </div>
 
-    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border dark:border-gray-700 p-5">
+    <div id="content-tab-produksi" class="hidden bg-white dark:bg-gray-800 rounded-2xl shadow-sm border dark:border-gray-700 p-5">
         <div class="flex items-center space-x-2 mb-4 border-b dark:border-gray-700 pb-2">
             <span>🍳</span>
             <h3 class="font-serif font-bold text-base text-gray-800 dark:text-gray-200">Log Aktivitas Produksi Dapur</h3>
@@ -68,4 +86,25 @@
     </div>
 
 </div>
+
+<script>
+    function switchTab(tabName) {
+        const pesananBtn = document.getElementById('tab-btn-pesanan');
+        const produksiBtn = document.getElementById('tab-btn-produksi');
+        const pesananContent = document.getElementById('content-tab-pesanan');
+        const produksiContent = document.getElementById('content-tab-produksi');
+
+        if (tabName === 'pesanan') {
+            pesananContent.classList.remove('hidden');
+            produksiContent.classList.add('hidden');
+            pesananBtn.className = "px-5 py-2.5 rounded-xl text-sm font-bold transition duration-200 bg-white dark:bg-gray-800 text-gray-800 dark:text-white shadow-sm";
+            produksiBtn.className = "px-5 py-2.5 rounded-xl text-sm font-bold transition duration-200 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200";
+        } else if (tabName === 'produksi') {
+            produksiContent.classList.remove('hidden');
+            pesananContent.classList.add('hidden');
+            produksiBtn.className = "px-5 py-2.5 rounded-xl text-sm font-bold transition duration-200 bg-white dark:bg-gray-800 text-gray-800 dark:text-white shadow-sm";
+            pesananBtn.className = "px-5 py-2.5 rounded-xl text-sm font-bold transition duration-200 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200";
+        }
+    }
+</script>
 <%- include('layouts/footer') %>

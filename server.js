@@ -1,6 +1,6 @@
 const express = require('express');
 const session = require('express-session');
-const bcrypt = require('bcryptjs'); // Menggunakan bcryptjs agar aman dan lancar di Windows
+const bcrypt = require('bcryptjs'); 
 const path = require('path');
 const db = require('./config/db');
 const isAuthenticated = require('./middleware/auth');
@@ -25,7 +25,7 @@ app.use(session({
 app.use((req, res, next) => {
     res.locals.username = req.session.username || null;
     res.locals.email = req.session.email || null;
-    res.locals.status = req.query.status || null; // Menangkap status secara global untuk pop-up modal kustom
+    res.locals.status = req.query.status || null;
     next();
 });
 
@@ -36,7 +36,6 @@ app.get('/login', (req, res) => {
         if (req.session.userId) return res.redirect('/dashboard');
         res.render('login');
     } catch (error) {
-        // Memaksa Render mencetak error rendering ejs jika ada masalah path folder
         console.error("🔥 ERROR PADA GET LOGIN:", error);
         res.status(500).send("Server Error di GET /login: " + error.message);
     }
@@ -61,7 +60,6 @@ app.post('/login', async (req, res) => {
         req.session.email = user.email;
         res.redirect('/dashboard?status=loginsuccess');
     } catch (err) {
-        // Memaksa Render mencetak error database secara detail di tab Logs
         console.error("🔥 ERROR PADA POST LOGIN DATABASE:", err);
         res.status(500).send("Server Error di POST /login: " + err.message);
     }
@@ -96,18 +94,14 @@ app.get('/dashboard', isAuthenticated, (req, res) => {
     res.render('dashboard');
 });
 
-// 1. Input Jumlah Produksi (Masak - Mendukung Banyak Baris/Multi-Item & Log Hari Ini)
+// 1. Input Jumlah Produksi (Hanya milik user login)
 app.get('/produksi', isAuthenticated, async (req, res) => {
     try {
-        // Mendapatkan tanggal hari ini dengan format YYYY-MM-DD sesuai zona waktu lokal
         const hariIni = new Date().toLocaleDateString('fr-CA'); 
-
-        // Ambil data produksi yang dicatat khusus untuk hari ini
         const [produksiHariIni] = await db.query(
-            'SELECT * FROM produksi WHERE tanggal_produksi = ? ORDER BY created_at DESC', 
-            [hariIni]
+            'SELECT * FROM produksi WHERE tanggal_produksi = ? AND user_id = ? ORDER BY created_at DESC', 
+            [hariIni, req.session.userId]
         );
-
         res.render('produksi', { produksiHariIni });
     } catch (err) {
         console.error("🔥 Gagal mengambil data produksi hari ini:", err);
@@ -118,13 +112,11 @@ app.get('/produksi', isAuthenticated, async (req, res) => {
 app.post('/produksi', isAuthenticated, async (req, res) => {
     const { jumlah_kg, jumlah_kue, rasa, ukuran, tanggal_produksi } = req.body;
     try {
-        // Normalisasi data ke bentuk array untuk mengantisipasi input tunggal maupun jamak
         const itemsKg = Array.isArray(jumlah_kg) ? jumlah_kg : [jumlah_kg];
         const itemsQty = Array.isArray(jumlah_kue) ? jumlah_kue : [jumlah_kue];
         const itemsRasa = Array.isArray(rasa) ? rasa : [rasa];
         const itemsUkuran = Array.isArray(ukuran) ? ukuran : [ukuran];
 
-        // Eksekusi bulk-insert rencana adonan masakan ke database
         for (let i = 0; i < itemsKg.length; i++) {
             await db.query(
                 'INSERT INTO produksi (user_id, jumlah_kg, jumlah_kue, rasa, ukuran, tanggal_produksi) VALUES (?, ?, ?, ?, ?, ?)',
@@ -138,7 +130,7 @@ app.post('/produksi', isAuthenticated, async (req, res) => {
     }
 });
 
-// 2. Input Pesanan Masuk (Mendukung Multi-Rasa dan Multi-Ukuran sekaligus)
+// 2. Input Pesanan Masuk (Menyimpan user_id penginput)
 app.get('/pesanan', isAuthenticated, (req, res) => {
     res.render('pesanan');
 });
@@ -146,20 +138,17 @@ app.get('/pesanan', isAuthenticated, (req, res) => {
 app.post('/pesanan', isAuthenticated, async (req, res) => {
     const { nama_pemesan, tanggal_kirim, jumlah_kue, rasa, ukuran, is_frozen } = req.body;
     try {
-        // A. Insert data entitas induk pesanan (Master)
         const [resultMaster] = await db.query(
-            'INSERT INTO pesanan (nama_pemesan, tanggal_kirim) VALUES (?, ?)',
-            [nama_pemesan, tanggal_kirim]
+            'INSERT INTO pesanan (user_id, nama_pemesan, tanggal_kirim) VALUES (?, ?, ?)',
+            [req.session.userId, nama_pemesan, tanggal_kirim]
         );
         const insertIdMaster = resultMaster.insertId;
 
-        // B. Normalisasi data rincian kue menjadi array
         const itemsQty = Array.isArray(jumlah_kue) ? jumlah_kue : [jumlah_kue];
         const itemsRasa = Array.isArray(rasa) ? rasa : [rasa];
         const itemsUkuran = Array.isArray(ukuran) ? ukuran : [ukuran];
         const itemsFrozen = Array.isArray(is_frozen) ? is_frozen : [is_frozen];
 
-        // C. Eksekusi penyimpanan baris rincian item ke tabel detail
         for (let i = 0; i < itemsQty.length; i++) {
             const frozenVal = itemsFrozen[i] === '1' ? 1 : 0;
             await db.query(
@@ -173,41 +162,42 @@ app.post('/pesanan', isAuthenticated, async (req, res) => {
     }
 });
 
-// 3. Manage Pesanan & CRUD (Menggunakan JOIN antara Master & Detail)
+// 3. Manage Pesanan (Hanya mengambil pesanan milik user_id yang login)
 app.get('/manage-pesanan', isAuthenticated, async (req, res) => {
+
+    console.log("===> USER YANG SEDANG AKSES MANAGE PESANAN, ID-NYA ADALAH:", req.session.userId);
+    
     try {
         const [orders] = await db.query(`
             SELECT p.id, p.nama_pemesan, p.tanggal_kirim, p.status_bayar,
                    pd.id AS detail_id, pd.jumlah_kue, pd.rasa, pd.ukuran, pd.is_frozen
             FROM pesanan p
             JOIN pesanan_detail pd ON p.id = pd.pesanan_id
+            WHERE p.user_id = ?
             ORDER BY p.tanggal_kirim ASC, p.id ASC
-        `);
+        `, [req.session.userId]);
         res.render('manage-pesanan', { orders });
     } catch (err) {
         res.status(500).send("Gagal mengambil data pesanan.");
     }
 });
 
-// Update Status Pembayaran (Berdasarkan ID Master Pesanan)
+// Update Status Pembayaran
 app.post('/pesanan/status/:id', isAuthenticated, async (req, res) => {
     const { status_bayar } = req.body;
     try {
-        await db.query('UPDATE pesanan SET status_bayar = ? WHERE id = ?', [status_bayar, req.params.id]);
+        await db.query('UPDATE pesanan SET status_bayar = ? WHERE id = ? AND user_id = ?', [status_bayar, req.params.id, req.session.userId]);
         res.redirect('/manage-pesanan?status=updatesuccess');
     } catch (err) {
         res.redirect('/manage-pesanan?status=updatefailed');
     }
 });
 
-// Update Data Item Pesanan (CRUD - Edit Berdasarkan ID Detail Rincian Kue)
+// Update Data Item Pesanan
 app.post('/pesanan/update/:id', isAuthenticated, async (req, res) => {
     const { jumlah_kue, rasa, ukuran, tanggal_kirim, pesanan_id } = req.body;
     try {
-        // A. Perbarui tanggal kirim pada entitas induk pesanan
-        await db.query('UPDATE pesanan SET tanggal_kirim = ? WHERE id = ?', [tanggal_kirim, pesanan_id]);
-        
-        // B. Perbarui rincian adonan porsi spesifik pada tabel detail
+        await db.query('UPDATE pesanan SET tanggal_kirim = ? WHERE id = ? AND user_id = ?', [tanggal_kirim, pesanan_id, req.session.userId]);
         await db.query(
             'UPDATE pesanan_detail SET jumlah_kue = ?, rasa = ?, ukuran = ? WHERE id = ?',
             [jumlah_kue, rasa, ukuran, req.params.id]
@@ -218,43 +208,76 @@ app.post('/pesanan/update/:id', isAuthenticated, async (req, res) => {
     }
 });
 
-// Hapus Pesanan (CRUD - Delete Berdasarkan ID Detail Rincian Kue)
+// Hapus Pesanan
 app.get('/pesanan/delete/:id', isAuthenticated, async (req, res) => {
     try {
-        await db.query('DELETE FROM pesanan_detail WHERE id = ?', [req.params.id]);
+        await db.query(`
+            DELETE pd FROM pesanan_detail pd
+            JOIN pesanan p ON pd.pesanan_id = p.id
+            WHERE pd.id = ? AND p.user_id = ?
+        `, [req.params.id, req.session.userId]);
         res.redirect('/manage-pesanan?status=deletesuccess');
     } catch (err) {
         res.redirect('/manage-pesanan?status=deletefailed');
     }
 });
 
-// 4. History Pesanan & Produksi Gabungan dengan Filter Tanggal Hari (Satu Pintu)
+// 4. History Pesanan (PERBAIKAN LOGIKA QUERY AGAR BENAR-BENAR PRIVAT)
 app.get('/history', isAuthenticated, async (req, res) => {
     const filterTanggal = req.query.tanggal || '';
     try {
-        let paramsOrders = [];
-        let paramsProduksi = [];
+        let paramsOrders = [req.session.userId];
+        let paramsProduksi = [req.session.userId];
         
         let queryOrders = `
-            SELECT p.nama_pemesan, p.tanggal_kirim, p.status_bayar, 
-                   pd.jumlah_kue, pd.rasa, pd.ukuran, pd.is_frozen
+            SELECT p.id AS pesanan_id, p.nama_pemesan, p.tanggal_kirim, p.status_bayar, 
+                   pd.id AS detail_id, pd.jumlah_kue, pd.rasa, pd.ukuran, pd.is_frozen
             FROM pesanan p
-            JOIN pesanan_detail pd ON p.id = pd.pesanan_id`;
+            JOIN pesanan_detail pd ON p.id = pd.pesanan_id
+            WHERE p.user_id = ?`;
             
-        let queryProduksi = `SELECT jumlah_kg, jumlah_kue, rasa, ukuran, tanggal_produksi FROM produksi`;
+        let queryProduksi = `SELECT jumlah_kg, jumlah_kue, rasa, ukuran, tanggal_produksi, created_at FROM produksi WHERE user_id = ?`;
         
+        // Perbaikan: Gunakan "AND" agar filter tanggal tidak merusak aturan user_id
         if (filterTanggal) {
-            queryOrders += ' WHERE p.tanggal_kirim = ?';
-            queryProduksi += ' WHERE tanggal_produksi = ?';
+            queryOrders += ' AND p.tanggal_kirim = ?';
+            queryProduksi += ' AND tanggal_produksi = ?';
             paramsOrders.push(filterTanggal);
             paramsProduksi.push(filterTanggal);
         }
         
-        queryOrders += ' ORDER BY p.tanggal_kirim DESC';
+        queryOrders += ' ORDER BY p.tanggal_kirim DESC, p.nama_pemesan ASC';
         queryProduksi += ' ORDER BY created_at DESC';
         
-        const [orders] = await db.query(queryOrders, paramsOrders);
+        const [rowsOrders] = await db.query(queryOrders, paramsOrders);
         const [productions] = await db.query(queryProduksi, paramsProduksi);
+        
+        // ================= LOGIKA GROUPING BERDASARKAN NAMA & HARI =================
+        const groupedOrdersMap = {};
+        
+        rowsOrders.forEach(row => {
+            const tglString = new Date(row.tanggal_kirim).toLocaleDateString('fr-CA');
+            const uniqueKey = `${row.nama_pemesan.trim().toLowerCase()}_${tglString}`;
+            
+            if (!groupedOrdersMap[uniqueKey]) {
+                groupedOrdersMap[uniqueKey] = {
+                    nama_pemesan: row.nama_pemesan,
+                    tanggal_kirim: row.tanggal_kirim,
+                    status_bayar: row.status_bayar,
+                    details: []
+                };
+            }
+            
+            groupedOrdersMap[uniqueKey].details.push({
+                detail_id: row.detail_id,
+                jumlah_kue: row.jumlah_kue,
+                rasa: row.rasa,
+                ukuran: row.ukuran,
+                is_frozen: row.is_frozen
+            });
+        });
+        
+        const orders = Object.values(groupedOrdersMap);
         
         res.render('history', { orders, productions, filterTanggal });
     } catch (err) {
