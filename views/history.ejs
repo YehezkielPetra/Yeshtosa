@@ -1,6 +1,6 @@
 <%- include('layouts/header') %>
 <div class="flex flex-col md:flex-row md:items-center md:justify-between mb-6 gap-4">
-    <h2 class="text-xl font-bold font-serif">Riwayat Log Historis Pesanan</h2>
+    <h2 class="text-xl font-bold font-serif">Riwayat Log Historis Toko Kue</h2>
     <form action="/history" method="GET" class="flex items-center space-x-2">
         <label class="text-sm font-medium text-gray-600 dark:text-gray-400">Filter Hari:</label>
         <input type="date" name="tanggal" value="<%= filterTanggal %>" class="p-2 bg-white dark:bg-gray-800 rounded-xl border dark:border-gray-700 text-sm">
@@ -10,25 +10,62 @@
         <% } %>
     </form>
 </div>
-<div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border dark:border-gray-700 p-4">
-    <div class="space-y-3">
-        <% if(orders.length === 0) { %>
-            <p class="text-center text-gray-400 py-6 text-sm">Tidak ada rekaman transaksi log pada tanggal tersebut.</p>
-        <% } %>
-        <% orders.forEach(order => { %>
-            <div class="p-4 border dark:border-gray-700 rounded-xl flex flex-col md:flex-row md:items-center md:justify-between gap-2">
-                <div>
-                    <h4 class="font-bold text-base"><%= order.nama_pemesan %></h4>
-                    <p class="text-xs text-gray-500 mt-1">Detail: <%= order.jumlah_kue %> unit / Rasa <%= order.rasa %> / Ukuran <%= order.ukuran %> <%= order.is_frozen ? '(Kondisi Frozen)':'' %></p>
+
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+    
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border dark:border-gray-700 p-5">
+        <div class="flex items-center space-x-2 mb-4 border-b dark:border-gray-700 pb-2">
+            <span>📦</span>
+            <h3 class="font-serif font-bold text-base text-gray-800 dark:text-gray-200">Log Transaksi Pesanan</h3>
+        </div>
+        <div class="space-y-3">
+            <% if(orders.length === 0) { %>
+                <p class="text-center text-gray-400 py-6 text-sm italic">Tidak ada rekaman transaksi pesanan pada tanggal tersebut.</p>
+            <% } %>
+            <% orders.forEach(order => { %>
+                <div class="p-4 border dark:border-gray-700 rounded-xl flex flex-col justify-between gap-2 bg-gray-50/30 dark:bg-gray-900/20">
+                    <div>
+                        <h4 class="font-bold text-sm text-gray-800 dark:text-gray-200"><%= order.nama_pemesan %></h4>
+                        <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Detail: <%= order.jumlah_kue %> Pcs / Rasa <%= order.rasa %> / Ukuran <%= order.ukuran %> <%= order.is_frozen ? '(Kondisi Frozen)':'' %></p>
+                    </div>
+                    <div class="flex items-center justify-between mt-1 pt-2 border-t border-gray-100 dark:border-gray-700/50">
+                        <span class="block text-[11px] font-medium text-gray-400">Kirim: <%= order.tanggal_kirim.toLocaleDateString('id-ID', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' }) %></span>
+                        <span class="inline-block text-[10px] font-bold px-2 py-0.5 rounded-full <%= order.status_bayar==='sudah bayar'?'bg-green-100 text-green-700 dark:bg-green-900/20':'bg-red-100 text-red-700 dark:bg-red-900/20' %>">
+                            <%= order.status_bayar.toUpperCase() %>
+                        </span>
+                    </div>
                 </div>
-                <div class="text-left md:text-right">
-                    <span class="block text-xs font-semibold text-gray-400">Pengiriman: <%= order.tanggal_kirim.toLocaleDateString('id-ID', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }) %></span>
-                    <span class="inline-block text-[11px] font-bold mt-1 px-2 py-0.5 rounded-full <%= order.status_bayar==='sudah bayar'?'bg-green-100 text-green-700 dark:bg-green-900/20':'bg-red-100 text-red-700 dark:bg-red-900/20' %>">
-                        <%= order.status_bayar.toUpperCase() %>
-                    </span>
-                </div>
-            </div>
-        <% }) %>
+            <% }) %>
+        </div>
     </div>
+
+    <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border dark:border-gray-700 p-5">
+        <div class="flex items-center space-x-2 mb-4 border-b dark:border-gray-700 pb-2">
+            <span>🍳</span>
+            <h3 class="font-serif font-bold text-base text-gray-800 dark:text-gray-200">Log Aktivitas Produksi Dapur</h3>
+        </div>
+        <div class="space-y-3">
+            <% if(productions.length === 0) { %>
+                <p class="text-center text-gray-400 py-6 text-sm italic">Tidak ada rekaman aktivitas masak pada tanggal tersebut.</p>
+            <% } %>
+            <% productions.forEach(prod => { %>
+                <div class="p-4 border dark:border-gray-700 rounded-xl flex flex-col justify-between gap-2 bg-amber-50/10 dark:bg-amber-950/5">
+                    <div class="flex items-start justify-between">
+                        <div>
+                            <h4 class="font-bold text-sm text-gray-800 dark:text-gray-200">Bahan Baku: <%= prod.jumlah_kg %> Kg</h4>
+                            <p class="text-xs text-gray-500 dark:text-gray-400 mt-1">Hasil Masak: <%= prod.jumlah_kue %> Pcs / Ukuran <%= prod.ukuran.toUpperCase() %></p>
+                        </div>
+                        <span class="px-2 py-0.5 rounded text-[10px] font-bold <%= prod.rasa === 'pedas' ? 'bg-red-100 text-red-700 dark:bg-red-950/40 dark:text-red-400' : 'bg-green-100 text-green-700 dark:bg-green-950/40 dark:text-green-400' %>">
+                            <%= prod.rasa.toUpperCase() %>
+                        </span>
+                    </div>
+                    <div class="mt-1 pt-2 border-t border-gray-100 dark:border-gray-700/50">
+                        <span class="block text-[11px] font-medium text-gray-400 text-right">Tanggal Masak: <%= new Date(prod.tanggal_produksi).toLocaleDateString('id-ID', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' }) %></span>
+                    </div>
+                </div>
+            <% }) %>
+        </div>
+    </div>
+
 </div>
 <%- include('layouts/footer') %>

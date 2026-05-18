@@ -96,9 +96,23 @@ app.get('/dashboard', isAuthenticated, (req, res) => {
     res.render('dashboard');
 });
 
-// 1. Input Jumlah Produksi (Masak - Mendukung Banyak Baris/Multi-Item)
-app.get('/produksi', isAuthenticated, (req, res) => {
-    res.render('produksi');
+// 1. Input Jumlah Produksi (Masak - Mendukung Banyak Baris/Multi-Item & Log Hari Ini)
+app.get('/produksi', isAuthenticated, async (req, res) => {
+    try {
+        // Mendapatkan tanggal hari ini dengan format YYYY-MM-DD sesuai zona waktu lokal
+        const hariIni = new Date().toLocaleDateString('fr-CA'); 
+
+        // Ambil data produksi yang dicatat khusus untuk hari ini
+        const [produksiHariIni] = await db.query(
+            'SELECT * FROM produksi WHERE tanggal_produksi = ? ORDER BY created_at DESC', 
+            [hariIni]
+        );
+
+        res.render('produksi', { produksiHariIni });
+    } catch (err) {
+        console.error("🔥 Gagal mengambil data produksi hari ini:", err);
+        res.status(500).send("Server Error saat memuat halaman produksi.");
+    }
 });
 
 app.post('/produksi', isAuthenticated, async (req, res) => {
@@ -119,6 +133,7 @@ app.post('/produksi', isAuthenticated, async (req, res) => {
         }
         res.redirect('/produksi?status=produksuccess');
     } catch (err) {
+        console.error("🔥 Gagal menyimpan data produksi:", err);
         res.redirect('/produksi?status=produksifailed');
     }
 });
@@ -213,27 +228,38 @@ app.get('/pesanan/delete/:id', isAuthenticated, async (req, res) => {
     }
 });
 
-// 4. History Pesanan dengan Filter Tanggal Hari (JOIN View Komplet)
+// 4. History Pesanan & Produksi Gabungan dengan Filter Tanggal Hari (Satu Pintu)
 app.get('/history', isAuthenticated, async (req, res) => {
     const filterTanggal = req.query.tanggal || '';
     try {
-        let query = `
+        let paramsOrders = [];
+        let paramsProduksi = [];
+        
+        let queryOrders = `
             SELECT p.nama_pemesan, p.tanggal_kirim, p.status_bayar, 
                    pd.jumlah_kue, pd.rasa, pd.ukuran, pd.is_frozen
             FROM pesanan p
             JOIN pesanan_detail pd ON p.id = pd.pesanan_id`;
-        let params = [];
+            
+        let queryProduksi = `SELECT jumlah_kg, jumlah_kue, rasa, ukuran, tanggal_produksi FROM produksi`;
         
         if (filterTanggal) {
-            query += ' WHERE p.tanggal_kirim = ?';
-            params.push(filterTanggal);
+            queryOrders += ' WHERE p.tanggal_kirim = ?';
+            queryProduksi += ' WHERE tanggal_produksi = ?';
+            paramsOrders.push(filterTanggal);
+            paramsProduksi.push(filterTanggal);
         }
-        query += ' ORDER BY p.tanggal_kirim DESC';
         
-        const [orders] = await db.query(query, params);
-        res.render('history', { orders, filterTanggal });
+        queryOrders += ' ORDER BY p.tanggal_kirim DESC';
+        queryProduksi += ' ORDER BY created_at DESC';
+        
+        const [orders] = await db.query(queryOrders, paramsOrders);
+        const [productions] = await db.query(queryProduksi, paramsProduksi);
+        
+        res.render('history', { orders, productions, filterTanggal });
     } catch (err) {
-        res.status(500).send("Gagal mengambil data riwayat.");
+        console.error("🔥 Gagal memuat data histori log:", err);
+        res.status(500).send("Gagal mengambil data riwayat log.");
     }
 });
 

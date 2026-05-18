@@ -51,6 +51,44 @@
 
         <button type="submit" class="w-full py-3 bg-kue-brand hover:bg-kue-brandHover text-white font-bold rounded-xl shadow-sm transition">Simpan Semua Rencana Rilis Produksi</button>
     </form>
+
+    <div class="mt-10 pt-6 border-t border-gray-100 dark:border-gray-700">
+        <div class="flex items-center space-x-2 mb-4">
+            <span>📋</span>
+            <h4 class="text-base font-bold font-serif text-gray-800 dark:text-gray-200">Log Produksi Masak Hari Ini</h4>
+        </div>
+        
+        <% if (produksiHariIni && produksiHariIni.length > 0) { %>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-xs border-collapse">
+                    <thead>
+                        <tr class="bg-gray-50 dark:bg-gray-900 text-gray-500 dark:text-gray-400 font-semibold uppercase tracking-wider border-b dark:border-gray-700">
+                            <th class="p-3">Porsi Masak</th>
+                            <th class="p-3">Hasil Jadi</th>
+                            <th class="p-3">Varian Rasa</th>
+                            <th class="p-3">Ukuran</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100 dark:divide-gray-700 text-gray-700 dark:text-gray-300">
+                        <% produksiHariIni.forEach(item => { %>
+                            <tr class="hover:bg-gray-50/50 dark:hover:bg-gray-900/50">
+                                <td class="p-3 font-medium"><%= item.jumlah_kg %> Kg</td>
+                                <td class="p-3"><%= item.jumlah_kue %> Pcs</td>
+                                <td class="p-3">
+                                    <span class="px-2 py-0.5 rounded text-[10px] font-bold <%= item.rasa === 'pedas' ? 'bg-red-50 text-red-600 dark:bg-red-950/30 dark:text-red-400' : 'bg-green-50 text-green-600 dark:bg-green-950/30 dark:text-green-400' %>">
+                                        <%= item.rasa.toUpperCase() %>
+                                    </span>
+                                </td>
+                                <td class="p-3 capitalize"><%= item.ukuran %></td>
+                            </tr>
+                        <% }) %>
+                    </tbody>
+                </table>
+            </div>
+        <% } else { %>
+            <p class="text-gray-400 dark:text-gray-500 text-xs italic py-2">Belum ada adonan rilis masak yang diinput khusus hari ini.</p>
+        <% } %>
+    </div>
 </div>
 
 <script>
