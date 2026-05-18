@@ -28,42 +28,47 @@
 
         <hr class="dark:border-gray-700">
 
-        <div class="hidden md:grid grid-cols-12 gap-4 px-4 text-xs font-bold text-gray-400 dark:text-gray-500 uppercase tracking-wider">
-            <div class="col-span-4">Jumlah Order (Pcs)</div>
-            <div class="col-span-4">Rasa</div>
-            <div class="col-span-4">Ukuran</div>
-        </div>
-
         <div id="wrapper-item-kue" class="space-y-4">
             <div class="item-kue-row p-4 bg-amber-50/20 dark:bg-gray-900/40 rounded-xl border border-dashed border-amber-200 dark:border-gray-700 relative">
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="grid grid-cols-1 md:grid-cols-5 gap-3 items-end">
                     <div>
-                        <label class="block md:hidden text-xs font-semibold text-gray-500 mb-1">Jumlah Order (Pcs)</label>
-                        <input type="number" name="jumlah_kue" required class="w-full p-2.5 bg-white dark:bg-gray-700 rounded-lg border text-sm text-gray-900 dark:text-white">
+                        <label class="block text-xs font-semibold text-gray-500 mb-1">Jumlah (Pcs)</label>
+                        <input type="number" name="jumlah_kue" required class="w-full p-2 bg-white dark:bg-gray-700 rounded-lg border text-sm text-gray-900 dark:text-white focus:outline-none">
                     </div>
                     <div>
-                        <label class="block md:hidden text-xs font-semibold text-gray-500 mb-1">Rasa</label>
-                        <select name="rasa" class="w-full p-2.5 bg-white dark:bg-gray-700 rounded-lg border text-sm text-gray-900 dark:text-white">
+                        <label class="block text-xs font-semibold text-gray-500 mb-1">Rasa</label>
+                        <select name="rasa" class="w-full p-2 bg-white dark:bg-gray-700 rounded-lg border text-sm text-gray-900 dark:text-white focus:outline-none">
                             <option value="tidak pedas">Tidak Pedas</option>
                             <option value="pedas">Pedas</option>
                         </select>
                     </div>
                     <div>
-                        <label class="block md:hidden text-xs font-semibold text-gray-500 mb-1">Ukuran</label>
-                        <select name="ukuran" class="w-full p-2.5 bg-white dark:bg-gray-700 rounded-lg border text-sm text-gray-900 dark:text-white">
+                        <label class="block text-xs font-semibold text-gray-500 mb-1">Ukuran</label>
+                        <select name="ukuran" class="w-full p-2 bg-white dark:bg-gray-700 rounded-lg border text-sm text-gray-900 dark:text-white focus:outline-none">
                             <option value="kecil">Kecil</option>
                             <option value="besar">Besar</option>
                             <option value="jumbo">Jumbo</option>
                         </select>
                     </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-500 mb-1">Kategori Tipe</label>
+                        <select name="tipe_pesanan" onchange="toggleHargaKustom(this, 0)" class="w-full p-2 bg-white dark:bg-gray-700 rounded-lg border text-sm text-gray-900 dark:text-white focus:outline-none font-bold">
+                            <option value="Reguler">📦 Reguler</option>
+                            <option value="Spesial">✨ Spesial (Custom)</option>
+                        </select>
+                    </div>
+                    <div id="container-harga-kustom-0" class="hidden">
+                        <label class="block text-xs font-bold text-amber-600 mb-1">Harga Kustom (Rp)</label>
+                        <input type="number" name="harga_kustom" value="0" class="w-full p-2 bg-amber-50/50 dark:bg-gray-800 rounded-lg border border-amber-300 text-sm font-bold text-gray-900 dark:text-white focus:outline-none">
+                    </div>
                 </div>
                 <div class="flex items-center justify-between mt-3 pt-2 border-t border-gray-100 dark:border-gray-700/50">
                     <label class="flex items-center space-x-2">
                         <input type="hidden" name="is_frozen" value="0" id="frozen_hidden_0">
-                        <input type="checkbox" onchange="handleFrozenCheckbox(this, 0)" class="w-4 h-4 text-amber-500 rounded focus:ring-amber-500 dark:bg-gray-700 dark:border-gray-600">
+                        <input type="checkbox" onchange="handleFrozenCheckbox(this, 0)" class="w-4 h-4 text-amber-500 rounded">
                         <span class="text-xs text-gray-600 dark:text-gray-400">Frozen State</span>
                     </label>
-                    <button type="button" onclick="hapusBarisItem(this)" class="text-xs text-red-500 font-semibold hover:underline hidden btn-hapus-row">Hapus Item</button>
+                    <button type="button" onclick="hapusBarisItem(this)" class="text-xs text-red-500 font-semibold hover:underline hidden btn-hapus-row">Hapus</button>
                 </div>
             </div>
         </div>
@@ -75,22 +80,44 @@
 
 <script>
     let rowIndex = 1;
+
+    function toggleHargaKustom(selectEl, idx) {
+        const container = document.getElementById(`container-harga-kustom-${idx}`);
+        const inputHarga = container ? container.querySelector('input[name="harga_kustom"]') : null;
+        if (selectEl.value === 'Spesial') {
+            container.classList.remove('hidden');
+        } else {
+            container.classList.add('hidden');
+            if(inputHarga) inputHarga.value = "0";
+        }
+    }
+
     function tambahBarisItem() {
         const wrapper = document.getElementById('wrapper-item-kue');
         const newRow = document.createElement('div');
         newRow.className = "item-kue-row p-4 bg-amber-50/20 dark:bg-gray-900/40 rounded-xl border border-dashed border-amber-200 dark:border-gray-700 relative";
         newRow.innerHTML = `
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div><input type="number" name="jumlah_kue" required class="w-full p-2.5 bg-white dark:bg-gray-700 rounded-lg border text-sm text-gray-900 dark:text-white"></div>
-                <div><select name="rasa" class="w-full p-2.5 bg-white dark:bg-gray-700 rounded-lg border text-sm text-gray-900 dark:text-white"><option value="tidak pedas">Tidak Pedas</option><option value="pedas">Pedas</option></select></div>
-                <div><select name="ukuran" class="w-full p-2.5 bg-white dark:bg-gray-700 rounded-lg border text-sm text-gray-900 dark:text-white"><option value="kecil">Kecil</option><option value="besar">Besar</option><option value="jumbo">Jumbo</option></select></div>
+            <div class="grid grid-cols-1 md:grid-cols-5 gap-3 items-end">
+                <div><input type="number" name="jumlah_kue" required class="w-full p-2 bg-white dark:bg-gray-700 rounded-lg border text-sm text-gray-900 dark:text-white focus:outline-none"></div>
+                <div><select name="rasa" class="w-full p-2 bg-white dark:bg-gray-700 rounded-lg border text-sm text-gray-900 dark:text-white focus:outline-none"><option value="tidak pedas">Tidak Pedas</option><option value="pedas">Pedas</option></select></div>
+                <div><select name="ukuran" class="w-full p-2 bg-white dark:bg-gray-700 rounded-lg border text-sm text-gray-900 dark:text-white focus:outline-none"><option value="kecil">Kecil</option><option value="besar">Besar</option><option value="jumbo">Jumbo</option></select></div>
+                <div>
+                    <select name="tipe_pesanan" onchange="toggleHargaKustom(this, ${rowIndex})" class="w-full p-2 bg-white dark:bg-gray-700 rounded-lg border text-sm text-gray-900 dark:text-white focus:outline-none font-bold">
+                        <option value="Reguler">📦 Reguler</option>
+                        <option value="Spesial">✨ Spesial (Custom)</option>
+                    </select>
+                </div>
+                <div id="container-harga-kustom-${rowIndex}" class="hidden">
+                    <input type="number" name="harga_kustom" value="0" class="w-full p-2 bg-amber-50/50 dark:bg-gray-800 rounded-lg border border-amber-300 text-sm font-bold text-gray-900 dark:text-white focus:outline-none">
+                </div>
             </div>
             <div class="flex items-center justify-between mt-3 pt-2 border-t border-gray-100 dark:border-gray-700/50">
                 <label class="flex items-center space-x-2"><input type="hidden" name="is_frozen" value="0" id="frozen_hidden_${rowIndex}"><input type="checkbox" onchange="handleFrozenCheckbox(this, ${rowIndex})" class="w-4 h-4 text-amber-500 rounded"><span class="text-xs text-gray-600 dark:text-gray-400">Frozen State</span></label>
-                <button type="button" onclick="hapusBarisItem(this)" class="text-xs text-red-500 font-semibold hover:underline btn-hapus-row">Hapus Item</button>
+                <button type="button" onclick="hapusBarisItem(this)" class="text-xs text-red-500 font-semibold hover:underline btn-hapus-row">Hapus</button>
             </div>`;
         wrapper.appendChild(newRow); rowIndex++; toggleHapusButtonVisibility();
     }
+    
     function hapusBarisItem(b) { b.closest('.item-kue-row').remove(); toggleHapusButtonVisibility(); }
     function toggleHapusButtonVisibility() {
         const rows = document.querySelectorAll('.item-kue-row');
@@ -101,8 +128,8 @@
     const inputTgl = document.getElementById('tanggal_kirim');
     const bHariIni = document.getElementById('btnKirimHariIni');
     const bNanti = document.getElementById('btnKirimNanti');
-    function setKirimHariIni() { if(inputTgl) { inputTgl.value = new Date().toLocaleDateString('fr-CA'); inputTgl.readOnly = true; bHariIni.className = "flex-1 py-1.5 rounded-lg text-xs font-semibold bg-amber-500 text-white border-amber-500"; bNanti.className = "flex-1 py-1.5 rounded-lg text-xs font-semibold bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300 border-transparent"; } }
-    function setKirimNanti() { if(inputTgl) { inputTgl.value = ""; inputTgl.readOnly = false; bHariIni.className = "flex-1 py-1.5 rounded-lg text-xs font-semibold bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300 border-transparent"; bNanti.className = "flex-1 py-1.5 rounded-lg text-xs font-semibold bg-amber-500 text-white border-amber-500"; } }
+    function setKirimHariIni() { if(inputTgl) { inputTgl.value = new Date().toLocaleDateString('fr-CA'); inputTgl.readOnly = true; bHariIni.className = "flex-1 py-1.5 rounded-lg text-xs font-semibold bg-amber-500 text-white"; bNanti.className = "flex-1 py-1.5 rounded-lg text-xs font-semibold bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300"; } }
+    function setKirimNanti() { if(inputTgl) { inputTgl.value = ""; inputTgl.readOnly = false; bHariIni.className = "flex-1 py-1.5 rounded-lg text-xs font-semibold bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300"; bNanti.className = "flex-1 py-1.5 rounded-lg text-xs font-semibold bg-amber-500 text-white"; } }
     document.addEventListener('DOMContentLoaded', () => setKirimHariIni());
 </script>
 <%- include('layouts/footer') %>

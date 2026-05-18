@@ -19,12 +19,31 @@
             <input type="password" name="password" placeholder="Kosongkan jika tidak ingin mengubah password lama..." class="w-full p-3 bg-gray-50 dark:bg-gray-700 rounded-xl border dark:border-gray-600 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-amber-500 text-sm">
         </div>
 
-        <div class="p-4 bg-amber-50/40 dark:bg-amber-950/10 rounded-xl border border-amber-100 dark:border-amber-900/40">
-            <label class="block text-xs font-bold text-amber-700 dark:text-amber-400 uppercase tracking-wide mb-1">Konfigurasi Harga Kue (Per Pcs)</label>
-            <p class="text-[11px] text-gray-400 dark:text-gray-500 mb-2">Nilai rupiah ini bertindak sebagai pengali otomatis total pcs item terjual di halaman riwayat histori log.</p>
-            <div class="relative">
-                <span class="absolute left-3 top-3 text-sm font-bold text-amber-600">Rp</span>
-                <input type="number" name="harga_kue" value="<%= user.harga_kue %>" required class="w-full p-2.5 pl-9 bg-white dark:bg-gray-700 rounded-xl border border-amber-200 dark:border-gray-600 text-gray-900 dark:text-white font-bold text-sm focus:outline-none focus:ring-1 focus:ring-amber-500">
+        <div class="p-5 bg-amber-50/40 dark:bg-amber-950/10 rounded-xl border border-amber-100 dark:border-amber-900/40 space-y-4">
+            <label class="block text-xs font-bold text-amber-700 dark:text-amber-400 uppercase tracking-wide">Konfigurasi Standar Jual Kue (Per Pcs)</label>
+            
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div>
+                    <label class="block text-[11px] text-gray-500 font-medium mb-1">Ukuran Kecil</label>
+                    <div class="relative">
+                        <span class="absolute left-2 top-2.5 text-xs font-bold text-amber-600">Rp</span>
+                        <input type="number" name="harga_kecil" value="<%= user.harga_kecil || 0 %>" required class="w-full p-2 pl-7 bg-white dark:bg-gray-700 rounded-lg border text-xs font-bold text-gray-900 dark:text-white">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-[11px] text-gray-500 font-medium mb-1">Ukuran Besar</label>
+                    <div class="relative">
+                        <span class="absolute left-2 top-2.5 text-xs font-bold text-amber-600">Rp</span>
+                        <input type="number" name="harga_besar" value="<%= user.harga_besar || 0 %>" required class="w-full p-2 pl-7 bg-white dark:bg-gray-700 rounded-lg border text-xs font-bold text-gray-900 dark:text-white">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-[11px] text-gray-500 font-medium mb-1">Ukuran Jumbo</label>
+                    <div class="relative">
+                        <span class="absolute left-2 top-2.5 text-xs font-bold text-amber-600">Rp</span>
+                        <input type="number" name="harga_jumbo" value="<%= user.harga_jumbo || 0 %>" required class="w-full p-2 pl-7 bg-white dark:bg-gray-700 rounded-lg border text-xs font-bold text-gray-900 dark:text-white">
+                    </div>
+                </div>
             </div>
         </div>
 

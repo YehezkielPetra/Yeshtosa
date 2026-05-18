@@ -29,17 +29,14 @@ app.use(async (req, res, next) => {
     res.locals.last_device = req.query.last_device || null;
     res.locals.last_time = req.query.last_time || null;
 
-    // Sistem Keamanan Tunggal (Kick otomatis jika device lain mengambil alih sesi login)
+    // Sistem Keamanan Sesi Tunggal (Kick otomatis jika device lain mengambil alih login)
     if (req.session.userId) {
         try {
-            const [users] = await db.query('SELECT is_active_session, harga_kue FROM users WHERE id = ?', [req.session.userId]);
-            if (users.length > 0) {
-                res.locals.hargaKueUser = users[0].harga_kue || 0;
-                if (users[0].is_active_session !== req.sessionID) {
-                    return req.session.destroy(() => {
-                        res.redirect('/login?status=sessionoverwritten');
-                    });
-                }
+            const [users] = await db.query('SELECT is_active_session FROM users WHERE id = ?', [req.session.userId]);
+            if (users.length > 0 && users[0].is_active_session !== req.sessionID) {
+                return req.session.destroy(() => {
+                    res.redirect('/login?status=sessionoverwritten');
+                });
             }
         } catch (err) {
             console.error("🔥 Gagal memvalidasi sesi global:", err);
@@ -64,7 +61,6 @@ app.post('/login', async (req, res) => {
     const { username, password } = req.body;
     const userAgent = req.headers['user-agent'] || 'Unknown Device';
     
-    // Deteksi nama jenis perangkat akses sederhana
     let deviceName = 'Komputer / PC';
     if (/mobile/i.test(userAgent)) deviceName = 'Smartphone / HP';
     if (/tablet/i.test(userAgent)) deviceName = 'Tablet';
@@ -112,7 +108,7 @@ app.post('/register', async (req, res) => {
     const { username, email, password } = req.body;
     try {
         const hashedPassword = await bcrypt.hash(password, 10);
-        await db.query('INSERT INTO users (username, email, password, harga_kue) VALUES (?, ?, ?, 0)', [username, email, hashedPassword]);
+        await db.query('INSERT INTO users (username, email, password, harga_kecil, harga_besar, harga_jumbo) VALUES (?, ?, ?, 0, 0, 0)', [username, email, hashedPassword]);
         res.redirect('/login?status=registersuccess');
     } catch (err) {
         res.redirect('/register?status=registerfailed');
@@ -136,7 +132,6 @@ app.get('/logout', async (req, res) => {
 
 app.get('/', isAuthenticated, (req, res) => res.redirect('/dashboard'));
 
-// Dashboard: Menampilkan Tabel Monitoring Saldo Stok Kue Real-time & Info Perangkat Sesi
 app.get('/dashboard', isAuthenticated, async (req, res) => {
     try {
         const [stokKue] = await db.query('SELECT rasa, ukuran, stok_sekarang FROM stok_kue ORDER BY rasa ASC, ukuran ASC');
@@ -148,16 +143,14 @@ app.get('/dashboard', isAuthenticated, async (req, res) => {
     }
 });
 
-// 1. Input Rencana Produksi (Privat Per-Akun Terisolasi & Otomatis Menambah Saldo Stok)
 app.get('/produksi', isAuthenticated, async (req, res) => {
     try {
         const hariIni = new Date().toLocaleDateString('fr-CA'); 
-        // Mengunci kepemilikan data agar Akun 1 tidak bisa mengintip database produksi milik Akun 2
         const [produksiHariIni] = await db.query(
             'SELECT * FROM produksi WHERE tanggal_produksi = ? AND user_id = ? ORDER BY created_at DESC', 
             [hariIni, req.session.userId]
         );
-        res.render('produksi', { produksiHariIni });
+        res.render('produksi', { Bird: produksiHariIni });
     } catch (err) {
         console.error("🔥 Gagal mengambil data produksi hari ini:", err);
         res.status(500).send("Server Error saat memuat halaman produksi.");
@@ -201,7 +194,6 @@ app.post('/produksi', isAuthenticated, async (req, res) => {
     }
 });
 
-// Update Data Item Produksi (Terproteksi user_id)
 app.post('/produksi/update/:id', isAuthenticated, async (req, res) => {
     const { jumlah_kg, jumlah_kue, rasa, ukuran, tanggal_produksi } = req.body;
     try {
@@ -216,7 +208,6 @@ app.post('/produksi/update/:id', isAuthenticated, async (req, res) => {
     }
 });
 
-// Hapus Data Item Produksi (Terproteksi user_id)
 app.get('/produksi/delete/:id', isAuthenticated, async (req, res) => {
     try {
         await db.query('DELETE FROM produksi WHERE id = ? AND user_id = ?', [req.params.id, req.session.userId]);
@@ -227,13 +218,12 @@ app.get('/produksi/delete/:id', isAuthenticated, async (req, res) => {
     }
 });
 
-// 2. Input Pesanan Masuk (Mendukung Jam Kirim, Validasi Stok & Pemotongan)
 app.get('/pesanan', isAuthenticated, (req, res) => {
     res.render('pesanan');
 });
 
 app.post('/pesanan', isAuthenticated, async (req, res) => {
-    const { nama_pemesan, tanggal_kirim, jam_kirim, jumlah_kue, rasa, ukuran, is_frozen } = req.body;
+    const { nama_pemesan, tanggal_kirim, jam_kirim, jumlah_kue, rasa, ukuran, is_frozen, tipe_pesanan, harga_kustom } = req.body;
     const connection = await db.getConnection();
     try {
         await connection.beginTransaction();
@@ -242,6 +232,8 @@ app.post('/pesanan', isAuthenticated, async (req, res) => {
         const itemsRasa = Array.isArray(rasa) ? rasa : [rasa];
         const itemsUkuran = Array.isArray(ukuran) ? ukuran : [ukuran];
         const itemsFrozen = Array.isArray(is_frozen) ? is_frozen : [is_frozen];
+        const itemsTipe = Array.isArray(tipe_pesanan) ? tipe_pesanan : [tipe_pesanan];
+        const itemsHargaKustom = Array.isArray(harga_kustom) ? harga_kustom : [harga_kustom];
 
         // Validasi Ketersediaan Saldo Stok Kue Gudang
         for (let i = 0; i < itemsQty.length; i++) {
@@ -273,10 +265,13 @@ app.post('/pesanan', isAuthenticated, async (req, res) => {
             const rsa = itemsRasa[i];
             const ukr = itemsUkuran[i];
             const frozenVal = itemsFrozen[i] === '1' ? 1 : 0;
+            
+            // Jika tipe pesanan Spesial, ambil nilai kustom, jika reguler, harganya diset 0 (diambil dari profil saat render histori)
+            const hrgKustom = itemsTipe[i] === 'Spesial' ? parseInt(itemsHargaKustom[i] || 0) : 0;
 
             await connection.query(
-                'INSERT INTO pesanan_detail (pesanan_id, jumlah_kue, rasa, ukuran, is_frozen) VALUES (?, ?, ?, ?, ?)',
-                [insertIdMaster, qty, rsa, ukr, frozenVal]
+                'INSERT INTO pesanan_detail (pesanan_id, jumlah_kue, rasa, ukuran, is_frozen, tipe_pesanan, harga_kustom) VALUES (?, ?, ?, ?, ?, ?, ?)',
+                [insertIdMaster, qty, rsa, ukr, frozenVal, itemsTipe[i], hrgKustom]
             );
 
             await connection.query(
@@ -296,7 +291,6 @@ app.post('/pesanan', isAuthenticated, async (req, res) => {
     }
 });
 
-// 3. Manage Pesanan (Mendukung Tampilan Jam Kirim & Status Kirim Aktif)
 app.get('/manage-pesanan', isAuthenticated, async (req, res) => {
     try {
         const [orders] = await db.query(`
@@ -313,12 +307,10 @@ app.get('/manage-pesanan', isAuthenticated, async (req, res) => {
     }
 });
 
-// KONTROL CRUD BARU: Mengubah Status Pengiriman & Mengunci Jam Berhasil Sampai
 app.post('/pesanan/status-kirim/:id', isAuthenticated, async (req, res) => {
     const { status_kirim } = req.body;
     try {
         if (status_kirim === 'Berhasil Dikirim') {
-            // Jika pesanan sukses sampai, catat waktu timestamp sukses saat ini murni ke kolom dikirim_pada
             await db.query(
                 'UPDATE pesanan SET status_kirim = ?, dikirim_pada = NOW() WHERE id = ? AND user_id = ?',
                 [status_kirim, req.params.id, req.session.userId]
@@ -336,7 +328,6 @@ app.post('/pesanan/status-kirim/:id', isAuthenticated, async (req, res) => {
     }
 });
 
-// Update Status Pembayaran
 app.post('/pesanan/status/:id', isAuthenticated, async (req, res) => {
     const { status_bayar } = req.body;
     try {
@@ -347,7 +338,6 @@ app.post('/pesanan/status/:id', isAuthenticated, async (req, res) => {
     }
 });
 
-// Update Data Item Pesanan & Catatan Textarea (Mendukung Jam Kirim)
 app.post('/pesanan/update/:id', isAuthenticated, async (req, res) => {
     const { jumlah_kue, rasa, ukuran, tanggal_kirim, jam_kirim, pesanan_id, catatan } = req.body;
     try {
@@ -366,7 +356,6 @@ app.post('/pesanan/update/:id', isAuthenticated, async (req, res) => {
     }
 });
 
-// Hapus Pesanan
 app.get('/pesanan/delete/:id', isAuthenticated, async (req, res) => {
     try {
         await db.query(`
@@ -380,21 +369,20 @@ app.get('/pesanan/delete/:id', isAuthenticated, async (req, res) => {
     }
 });
 
-// 4. History Pesanan (Invoice Harga Otomatis) & Produksi Terkelompok
+// History Log (Kalkulasi Berdasarkan 3 Kategori Ukuran Standar Profil vs Kustom Spesial)
 app.get('/history', isAuthenticated, async (req, res) => {
     const filterTanggal = req.query.tanggal || '';
     const cariNama = req.query.nama || '';
     try {
-        // Tarik profil harga jual kue per pcs milik akun yang sedang login saat ini
-        const [userMeta] = await db.query('SELECT harga_kue FROM users WHERE id = ?', [req.session.userId]);
-        const hargaSatuanKue = userMeta[0].harga_kue || 0;
+        const [userMeta] = await db.query('SELECT harga_kecil, harga_besar, harga_jumbo FROM users WHERE id = ?', [req.session.userId]);
+        const hargaProfil = userMeta[0] || { harga_kecil: 0, harga_besar: 0, harga_jumbo: 0 };
 
         let paramsOrders = [req.session.userId];
         let paramsProduksi = [req.session.userId];
         
         let queryOrders = `
             SELECT p.id AS pesanan_id, p.nama_pemesan, p.tanggal_kirim, p.jam_kirim, p.status_bayar, p.status_kirim, p.dikirim_pada, p.catatan,
-                   pd.id AS detail_id, pd.jumlah_kue, pd.rasa, pd.ukuran, pd.is_frozen
+                   pd.id AS detail_id, pd.jumlah_kue, pd.rasa, pd.ukuran, pd.is_frozen, pd.tipe_pesanan, pd.harga_kustom
             FROM pesanan p
             JOIN pesanan_detail pd ON p.id = pd.pesanan_id
             WHERE p.user_id = ?`;
@@ -419,7 +407,6 @@ app.get('/history', isAuthenticated, async (req, res) => {
         const [rowsOrders] = await db.query(queryOrders, paramsOrders);
         const [rowsProduksi] = await db.query(queryProduksi, paramsProduksi);
         
-        // ================= LOGIKA GROUPING LOG PESANAN + TOTAL INVOICE KELIPATAN HARGA =================
         const groupedOrdersMap = {};
         rowsOrders.forEach(row => {
             const tglString = new Date(row.tanggal_kirim).toLocaleDateString('fr-CA');
@@ -434,29 +421,32 @@ app.get('/history', isAuthenticated, async (req, res) => {
                     status_kirim: row.status_kirim,
                     dikirim_pada: row.dikirim_pada,
                     catatan: row.catatan,
-                    total_pcs: 0, // Inisialisasi total pcs item terjual dalam 1 nota belanja
+                    total_bayar: 0,
                     details: []
                 };
             }
-            
-            // Tambahkan kuantitas pcs belanjaan kue ke akumulator total nota
-            groupedOrdersMap[uniqueKey].total_pcs += parseInt(row.jumlah_kue);
-            
+
+            // LOGIKA HITUNG HARGA INVOICE DINAMIS KATEGORI UKURAN VS SPESIAL KUSTOM USER
+            let hargaPerPcs = 0;
+            if (row.tipe_pesanan === 'Spesial') {
+                hargaPerPcs = row.harga_kustom;
+            } else {
+                if (row.ukuran === 'kecil') hargaPerPcs = hargaProfil.harga_kecil;
+                else if (row.ukuran === 'besar') hargaPerPcs = hargaProfil.harga_besar;
+                else if (row.ukuran === 'jumbo') hargaPerPcs = hargaProfil.harga_jumbo;
+            }
+
+            groupedOrdersMap[uniqueKey].total_bayar += (parseInt(row.jumlah_kue) * hargaPerPcs);
             groupedOrdersMap[uniqueKey].details.push({
                 jumlah_kue: row.jumlah_kue,
                 rasa: row.rasa,
                 ukuran: row.ukuran,
-                is_frozen: row.is_frozen
+                is_frozen: row.is_frozen,
+                tipe_pesanan: row.tipe_pesanan
             });
         });
+        const orders = Object.values(groupedOrdersMap);
 
-        // Map hasil objek belanjaan, lalu hitung total invoice bayar berdasarkan harga setelan di profil
-        const orders = Object.values(groupedOrdersMap).map(order => {
-            order.total_bayar = order.total_pcs * hargaSatuanKue;
-            return order;
-        });
-
-        // ================= LOGIKA GROUPING LOG PRODUKSI =================
         const groupedProduksiMap = {};
         rowsProduksi.forEach(row => {
             const tglString = new Date(row.tanggal_produksi).toLocaleDateString('fr-CA');
@@ -484,10 +474,9 @@ app.get('/history', isAuthenticated, async (req, res) => {
     }
 });
 
-// 5. Menu Profile Informasi (Ganti Password, Ganti Email & Set Harga Jual Kue)
 app.get('/profile', isAuthenticated, async (req, res) => {
     try {
-        const [userMeta] = await db.query('SELECT username, email, harga_kue FROM users WHERE id = ?', [req.session.userId]);
+        const [userMeta] = await db.query('SELECT username, email, harga_kecil, harga_besar, harga_jumbo FROM users WHERE id = ?', [req.session.userId]);
         res.render('profile', { user: userMeta[0] || {} });
     } catch (err) {
         res.status(500).send("Gagal memuat profil admin.");
@@ -495,23 +484,21 @@ app.get('/profile', isAuthenticated, async (req, res) => {
 });
 
 app.post('/profile/update', isAuthenticated, async (req, res) => {
-    const { email, password, harga_kue } = req.body;
+    const { email, password, harga_kecil, harga_besar, harga_jumbo } = req.body;
     try {
         if (password && password.trim() !== "") {
-            // Jika kolom password baru diisi, enkripsi dan simpan kata sandi teranyar
             const hashedPassword = await bcrypt.hash(password, 10);
             await db.query(
-                'UPDATE users SET email = ?, password = ?, harga_kue = ? WHERE id = ?',
-                [email, hashedPassword, harga_kue, req.session.userId]
+                'UPDATE users SET email = ?, password = ?, harga_kecil = ?, harga_besar = ?, harga_jumbo = ? WHERE id = ?',
+                [email, hashedPassword, harga_kecil, harga_besar, harga_jumbo, req.session.userId]
             );
         } else {
-            // Jika kolom password kosong, cukup perbarui email dan nominal konfigurasi harga jual kue gogos
             await db.query(
-                'UPDATE users SET email = ?, harga_kue = ? WHERE id = ?',
-                [email, harga_kue, req.session.userId]
+                'UPDATE users SET email = ?, harga_kecil = ?, harga_besar = ?, harga_jumbo = ? WHERE id = ?',
+                [email, harga_kecil, harga_besar, harga_jumbo, req.session.userId]
             );
         }
-        req.session.email = email; // Sinkronisasikan email pada sesi aktif
+        req.session.email = email; 
         res.redirect('/profile?status=updatesuccess');
     } catch (err) {
         console.error("🔥 Gagal memperbarui rincian metadata profil user:", err);
