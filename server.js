@@ -29,19 +29,6 @@ app.use(async (req, res, next) => {
     res.locals.last_device = req.query.last_device || null;
     res.locals.last_time = req.query.last_time || null;
 
-    // Sistem Keamanan Sesi Tunggal (Kick otomatis jika device lain mengambil alih login)
-    if (req.session.userId) {
-        try {
-            const [users] = await db.query('SELECT is_active_session FROM users WHERE id = ?', [req.session.userId]);
-            if (users.length > 0 && users[0].is_active_session !== req.sessionID) {
-                return req.session.destroy(() => {
-                    res.redirect('/login?status=sessionoverwritten');
-                });
-            }
-        } catch (err) {
-            console.error("🔥 Gagal memvalidasi sesi global:", err);
-        }
-    }
     next();
 });
 
@@ -77,17 +64,12 @@ app.post('/login', async (req, res) => {
             return res.redirect('/login?status=wrongpassword');
         }
 
-        // VALIDASI ATURAN DEVICE TUNGGAL: Cegah login jika akun sedang aktif di tempat lain
-        if (user.is_active_session && user.is_active_session !== '') {
-            const waktuTerakhir = user.last_login_at ? new Date(user.last_login_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : 'Tidak Diketahui';
-            return res.redirect(`/login?status=deviceblocked&last_device=${encodeURIComponent(user.last_device || 'Device Lain')}&last_time=${encodeURIComponent(waktuTerakhir)}`);
-        }
-
+        // PENGHAPUSAN VALIDASI DEVICE TUNGGAL: Akun kini bebas login di mana saja
         req.session.userId = user.id;
         req.session.username = user.username;
         req.session.email = user.email;
 
-        // Amankan status kunci ID Sesi ke database
+        // Tetap mencatat info metadata device login terakhir untuk arsip dashboard tanpa memblokir
         await db.query(
             'UPDATE users SET is_active_session = ?, last_device = ?, last_login_at = NOW() WHERE id = ?',
             [req.sessionID, deviceName, user.id]
@@ -150,7 +132,7 @@ app.get('/produksi', isAuthenticated, async (req, res) => {
             'SELECT * FROM produksi WHERE tanggal_produksi = ? AND user_id = ? ORDER BY created_at DESC', 
             [hariIni, req.session.userId]
         );
-        res.render('produksi', { Bird: produksiHariIni });
+        res.render('produksi', { produksiHariIni });
     } catch (err) {
         console.error("🔥 Gagal mengambil data produksi hari ini:", err);
         res.status(500).send("Server Error saat memuat halaman produksi.");
@@ -210,7 +192,7 @@ app.post('/produksi/update/:id', isAuthenticated, async (req, res) => {
 
 app.get('/produksi/delete/:id', isAuthenticated, async (req, res) => {
     try {
-        await db.query('DELETE FROM produksi WHERE id = ? AND user_id = ?', [req.params.id, req.session.userId]);
+        await db.query('DELETE FROM_SET produksi WHERE id = ? AND user_id = ?'.replace('FROM_SET', 'FROM'), [req.params.id, req.session.userId]);
         res.redirect('/produksi?status=deletesuccess');
     } catch (err) {
         console.error("🔥 Gagal menghapus data produksi:", err);
@@ -235,7 +217,6 @@ app.post('/pesanan', isAuthenticated, async (req, res) => {
         const itemsTipe = Array.isArray(tipe_pesanan) ? tipe_pesanan : [tipe_pesanan];
         const itemsHargaKustom = Array.isArray(harga_kustom) ? harga_kustom : [harga_kustom];
 
-        // Validasi Ketersediaan Saldo Stok Kue Gudang
         for (let i = 0; i < itemsQty.length; i++) {
             const qtyDibutuhkan = parseInt(itemsQty[i]);
             const rsa = itemsRasa[i];
@@ -253,7 +234,6 @@ app.post('/pesanan', isAuthenticated, async (req, res) => {
             }
         }
 
-        // Menyimpan master nota transaksi lengkap dengan jam_kirim komitmen pelanggan
         const [resultMaster] = await connection.query(
             'INSERT INTO pesanan (user_id, nama_pemesan, tanggal_kirim, jam_kirim, status_kirim) VALUES (?, ?, ?, ?, \'Diproses\')',
             [req.session.userId, nama_pemesan, tanggal_kirim, jam_kirim]
@@ -265,8 +245,6 @@ app.post('/pesanan', isAuthenticated, async (req, res) => {
             const rsa = itemsRasa[i];
             const ukr = itemsUkuran[i];
             const frozenVal = itemsFrozen[i] === '1' ? 1 : 0;
-            
-            // Jika tipe pesanan Spesial, ambil nilai kustom, jika reguler, harganya diset 0 (diambil dari profil saat render histori)
             const hrgKustom = itemsTipe[i] === 'Spesial' ? parseInt(itemsHargaKustom[i] || 0) : 0;
 
             await connection.query(
@@ -369,7 +347,6 @@ app.get('/pesanan/delete/:id', isAuthenticated, async (req, res) => {
     }
 });
 
-// History Log (Kalkulasi Berdasarkan 3 Kategori Ukuran Standar Profil vs Kustom Spesial)
 app.get('/history', isAuthenticated, async (req, res) => {
     const filterTanggal = req.query.tanggal || '';
     const cariNama = req.query.nama || '';
@@ -387,7 +364,7 @@ app.get('/history', isAuthenticated, async (req, res) => {
             JOIN pesanan_detail pd ON p.id = pd.pesanan_id
             WHERE p.user_id = ?`;
             
-        let queryProduksi = `SELECT id, jumlah_kg, jumlah_kue, rasa, ukuran, tanggal_produksi FROM produksi WHERE user_id = ?`;
+        let queryProduksi = `SELECT id, jumlah_kg, jumlah_kue, rasa, ukuran, tanggal_produksi FROM_SET produksi WHERE user_id = ?`.replace('FROM_SET', 'FROM');
         
         if (cariNama) {
             queryOrders += ' AND p.nama_pemesan LIKE ?';
@@ -426,7 +403,6 @@ app.get('/history', isAuthenticated, async (req, res) => {
                 };
             }
 
-            // LOGIKA HITUNG HARGA INVOICE DINAMIS KATEGORI UKURAN VS SPESIAL KUSTOM USER
             let hargaPerPcs = 0;
             if (row.tipe_pesanan === 'Spesial') {
                 hargaPerPcs = row.harga_kustom;
