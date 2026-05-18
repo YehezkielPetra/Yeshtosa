@@ -1,6 +1,6 @@
 const express = require('express');
 const session = require('express-session');
-const bcrypt = require('bcryptjs'); 
+const bcrypt = require('bcryptjs'); // Menggunakan bcryptjs agar aman dan lancar di Windows
 const path = require('path');
 const db = require('./config/db');
 const isAuthenticated = require('./middleware/auth');
@@ -22,10 +22,29 @@ app.use(session({
 }));
 
 // Global user session variables & query status for templates
-app.use((req, res, next) => {
+app.use(async (req, res, next) => {
     res.locals.username = req.session.username || null;
     res.locals.email = req.session.email || null;
     res.locals.status = req.query.status || null;
+    res.locals.last_device = req.query.last_device || null;
+    res.locals.last_time = req.query.last_time || null;
+
+    // Sistem Keamanan Tunggal (Kick otomatis jika device lain mengambil alih sesi login)
+    if (req.session.userId) {
+        try {
+            const [users] = await db.query('SELECT is_active_session, harga_kue FROM users WHERE id = ?', [req.session.userId]);
+            if (users.length > 0) {
+                res.locals.hargaKueUser = users[0].harga_kue || 0;
+                if (users[0].is_active_session !== req.sessionID) {
+                    return req.session.destroy(() => {
+                        res.redirect('/login?status=sessionoverwritten');
+                    });
+                }
+            }
+        } catch (err) {
+            console.error("🔥 Gagal memvalidasi sesi global:", err);
+        }
+    }
     next();
 });
 
@@ -43,6 +62,13 @@ app.get('/login', (req, res) => {
 
 app.post('/login', async (req, res) => {
     const { username, password } = req.body;
+    const userAgent = req.headers['user-agent'] || 'Unknown Device';
+    
+    // Deteksi nama jenis perangkat akses sederhana
+    let deviceName = 'Komputer / PC';
+    if (/mobile/i.test(userAgent)) deviceName = 'Smartphone / HP';
+    if (/tablet/i.test(userAgent)) deviceName = 'Tablet';
+
     try {
         const [users] = await db.query('SELECT * FROM users WHERE username = ? OR email = ?', [username, username]);
         if (users.length === 0) {
@@ -55,9 +81,22 @@ app.post('/login', async (req, res) => {
             return res.redirect('/login?status=wrongpassword');
         }
 
+        // VALIDASI ATURAN DEVICE TUNGGAL: Cegah login jika akun sedang aktif di tempat lain
+        if (user.is_active_session && user.is_active_session !== '') {
+            const waktuTerakhir = user.last_login_at ? new Date(user.last_login_at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : 'Tidak Diketahui';
+            return res.redirect(`/login?status=deviceblocked&last_device=${encodeURIComponent(user.last_device || 'Device Lain')}&last_time=${encodeURIComponent(waktuTerakhir)}`);
+        }
+
         req.session.userId = user.id;
         req.session.username = user.username;
         req.session.email = user.email;
+
+        // Amankan status kunci ID Sesi ke database
+        await db.query(
+            'UPDATE users SET is_active_session = ?, last_device = ?, last_login_at = NOW() WHERE id = ?',
+            [req.sessionID, deviceName, user.id]
+        );
+
         res.redirect('/dashboard?status=loginsuccess');
     } catch (err) {
         console.error("🔥 ERROR PADA POST LOGIN DATABASE:", err);
@@ -73,14 +112,21 @@ app.post('/register', async (req, res) => {
     const { username, email, password } = req.body;
     try {
         const hashedPassword = await bcrypt.hash(password, 10);
-        await db.query('INSERT INTO users (username, email, password) VALUES (?, ?, ?)', [username, email, hashedPassword]);
+        await db.query('INSERT INTO users (username, email, password, harga_kue) VALUES (?, ?, ?, 0)', [username, email, hashedPassword]);
         res.redirect('/login?status=registersuccess');
     } catch (err) {
         res.redirect('/register?status=registerfailed');
     }
 });
 
-app.get('/logout', (req, res) => {
+app.get('/logout', async (req, res) => {
+    try {
+        if (req.session.userId) {
+            await db.query('UPDATE users SET is_active_session = NULL WHERE id = ?', [req.session.userId]);
+        }
+    } catch (err) {
+        console.error("🔥 Gagal mereset sesi database saat logout:", err);
+    }
     req.session.destroy(() => {
         res.redirect('/login?status=logoutsuccess');
     });
@@ -90,21 +136,23 @@ app.get('/logout', (req, res) => {
 
 app.get('/', isAuthenticated, (req, res) => res.redirect('/dashboard'));
 
-// Dashboard: Menampilkan Tabel Monitoring Saldo Stok Kue Real-time
+// Dashboard: Menampilkan Tabel Monitoring Saldo Stok Kue Real-time & Info Perangkat Sesi
 app.get('/dashboard', isAuthenticated, async (req, res) => {
     try {
         const [stokKue] = await db.query('SELECT rasa, ukuran, stok_sekarang FROM stok_kue ORDER BY rasa ASC, ukuran ASC');
-        res.render('dashboard', { stokKue });
+        const [userProfile] = await db.query('SELECT last_device, last_login_at FROM users WHERE id = ?', [req.session.userId]);
+        res.render('dashboard', { stokKue, profile: userProfile[0] || {} });
     } catch (err) {
         console.error("🔥 Gagal memuat ringkasan stok di dashboard:", err);
         res.status(500).send("Gagal memuat halaman dashboard.");
     }
 });
 
-// 1. Input Rencana Produksi (Otomatis Menambah Saldo Stok Kue)
+// 1. Input Rencana Produksi (Privat Per-Akun Terisolasi & Otomatis Menambah Saldo Stok)
 app.get('/produksi', isAuthenticated, async (req, res) => {
     try {
         const hariIni = new Date().toLocaleDateString('fr-CA'); 
+        // Mengunci kepemilikan data agar Akun 1 tidak bisa mengintip database produksi milik Akun 2
         const [produksiHariIni] = await db.query(
             'SELECT * FROM produksi WHERE tanggal_produksi = ? AND user_id = ? ORDER BY created_at DESC', 
             [hariIni, req.session.userId]
@@ -118,7 +166,7 @@ app.get('/produksi', isAuthenticated, async (req, res) => {
 
 app.post('/produksi', isAuthenticated, async (req, res) => {
     const { jumlah_kg, jumlah_kue, rasa, ukuran, tanggal_produksi } = req.body;
-    const connection = await db.getConnection(); // Menggunakan Transaksi Database demi akurasi stok
+    const connection = await db.getConnection(); 
     try {
         await connection.beginTransaction();
 
@@ -127,18 +175,15 @@ app.post('/produksi', isAuthenticated, async (req, res) => {
         const itemsUkuran = Array.isArray(ukuran) ? ukuran : [ukuran];
 
         for (let i = 0; i < itemsQty.length; i++) {
-            // A. Ambil nilai kuantitas
             const qty = parseInt(itemsQty[i]);
             const rsa = itemsRasa[i];
             const ukr = itemsUkuran[i];
 
-            // B. Masukkan data log produksi ke database
             await connection.query(
                 'INSERT INTO produksi (user_id, jumlah_kg, jumlah_kue, rasa, ukuran, tanggal_produksi) VALUES (?, ?, ?, ?, ?, ?)',
                 [req.session.userId, jumlah_kg, qty, rsa, ukr, tanggal_produksi]
             );
 
-            // C. TAMBAHKAN SALDO STOK KUE KE TABEL MASTER STOK
             await connection.query(
                 'INSERT INTO stok_kue (rasa, ukuran, stok_sekarang) VALUES (?, ?, ?) ON DUPLICATE KEY UPDATE stok_sekarang = stok_sekarang + ?',
                 [rsa, ukr, qty, qty]
@@ -156,7 +201,7 @@ app.post('/produksi', isAuthenticated, async (req, res) => {
     }
 });
 
-// Update Data Item Produksi
+// Update Data Item Produksi (Terproteksi user_id)
 app.post('/produksi/update/:id', isAuthenticated, async (req, res) => {
     const { jumlah_kg, jumlah_kue, rasa, ukuran, tanggal_produksi } = req.body;
     try {
@@ -171,7 +216,7 @@ app.post('/produksi/update/:id', isAuthenticated, async (req, res) => {
     }
 });
 
-// Hapus Data Item Produksi
+// Hapus Data Item Produksi (Terproteksi user_id)
 app.get('/produksi/delete/:id', isAuthenticated, async (req, res) => {
     try {
         await db.query('DELETE FROM produksi WHERE id = ? AND user_id = ?', [req.params.id, req.session.userId]);
@@ -182,13 +227,13 @@ app.get('/produksi/delete/:id', isAuthenticated, async (req, res) => {
     }
 });
 
-// 2. Input Pesanan Masuk (Validasi Stok & Otomatis Mengurangi Saldo Stok Kue)
+// 2. Input Pesanan Masuk (Mendukung Jam Kirim, Validasi Stok & Pemotongan)
 app.get('/pesanan', isAuthenticated, (req, res) => {
     res.render('pesanan');
 });
 
 app.post('/pesanan', isAuthenticated, async (req, res) => {
-    const { nama_pemesan, tanggal_kirim, jumlah_kue, rasa, ukuran, is_frozen } = req.body;
+    const { nama_pemesan, tanggal_kirim, jam_kirim, jumlah_kue, rasa, ukuran, is_frozen } = req.body;
     const connection = await db.getConnection();
     try {
         await connection.beginTransaction();
@@ -198,7 +243,7 @@ app.post('/pesanan', isAuthenticated, async (req, res) => {
         const itemsUkuran = Array.isArray(ukuran) ? ukuran : [ukuran];
         const itemsFrozen = Array.isArray(is_frozen) ? is_frozen : [is_frozen];
 
-        // --- VALIDASI STOK PERTAMA: Cek ketersediaan seluruh item pesanan ---
+        // Validasi Ketersediaan Saldo Stok Kue Gudang
         for (let i = 0; i < itemsQty.length; i++) {
             const qtyDibutuhkan = parseInt(itemsQty[i]);
             const rsa = itemsRasa[i];
@@ -208,20 +253,18 @@ app.post('/pesanan', isAuthenticated, async (req, res) => {
                 'SELECT stok_sekarang FROM stok_kue WHERE rasa = ? AND ukuran = ?',
                 [rsa, ukr]
             );
-
             const stokTersedia = stokCheck.length > 0 ? stokCheck[0].stok_sekarang : 0;
 
             if (stokTersedia < qtyDibutuhkan) {
-                // Jika stok tidak mencukupi, gagalkan transaksi dan kirim alert notifikasi
                 await connection.rollback();
                 return res.redirect('/pesanan?status=stockinsufficient');
             }
         }
 
-        // --- EKSEKUSI: Jika stok aman, potong saldo stok dan buat nota pesanan ---
+        // Menyimpan master nota transaksi lengkap dengan jam_kirim komitmen pelanggan
         const [resultMaster] = await connection.query(
-            'INSERT INTO pesanan (user_id, nama_pemesan, tanggal_kirim) VALUES (?, ?, ?)',
-            [req.session.userId, nama_pemesan, tanggal_kirim]
+            'INSERT INTO pesanan (user_id, nama_pemesan, tanggal_kirim, jam_kirim, status_kirim) VALUES (?, ?, ?, ?, \'Diproses\')',
+            [req.session.userId, nama_pemesan, tanggal_kirim, jam_kirim]
         );
         const insertIdMaster = resultMaster.insertId;
 
@@ -231,13 +274,11 @@ app.post('/pesanan', isAuthenticated, async (req, res) => {
             const ukr = itemsUkuran[i];
             const frozenVal = itemsFrozen[i] === '1' ? 1 : 0;
 
-            // Simpan detail item pesanan
             await connection.query(
                 'INSERT INTO pesanan_detail (pesanan_id, jumlah_kue, rasa, ukuran, is_frozen) VALUES (?, ?, ?, ?, ?)',
                 [insertIdMaster, qty, rsa, ukr, frozenVal]
             );
 
-            // KURANGI SALDO STOK KUE KARENA SUDAH TERPESAN
             await connection.query(
                 'UPDATE stok_kue SET stok_sekarang = stok_sekarang - ? WHERE rasa = ? AND ukuran = ?',
                 [qty, rsa, ukr]
@@ -255,11 +296,11 @@ app.post('/pesanan', isAuthenticated, async (req, res) => {
     }
 });
 
-// 3. Manage Pesanan 
+// 3. Manage Pesanan (Mendukung Tampilan Jam Kirim & Status Kirim Aktif)
 app.get('/manage-pesanan', isAuthenticated, async (req, res) => {
     try {
         const [orders] = await db.query(`
-            SELECT p.id, p.nama_pemesan, p.tanggal_kirim, p.status_bayar, p.catatan,
+            SELECT p.id, p.nama_pemesan, p.tanggal_kirim, p.jam_kirim, p.status_bayar, p.status_kirim, p.catatan,
                    pd.id AS detail_id, pd.jumlah_kue, pd.rasa, pd.ukuran, pd.is_frozen
             FROM pesanan p
             JOIN pesanan_detail pd ON p.id = pd.pesanan_id
@@ -269,6 +310,29 @@ app.get('/manage-pesanan', isAuthenticated, async (req, res) => {
         res.render('manage-pesanan', { orders });
     } catch (err) {
         res.status(500).send("Gagal mengambil data pesanan.");
+    }
+});
+
+// KONTROL CRUD BARU: Mengubah Status Pengiriman & Mengunci Jam Berhasil Sampai
+app.post('/pesanan/status-kirim/:id', isAuthenticated, async (req, res) => {
+    const { status_kirim } = req.body;
+    try {
+        if (status_kirim === 'Berhasil Dikirim') {
+            // Jika pesanan sukses sampai, catat waktu timestamp sukses saat ini murni ke kolom dikirim_pada
+            await db.query(
+                'UPDATE pesanan SET status_kirim = ?, dikirim_pada = NOW() WHERE id = ? AND user_id = ?',
+                [status_kirim, req.params.id, req.session.userId]
+            );
+        } else {
+            await db.query(
+                'UPDATE pesanan SET status_kirim = ?, dikirim_pada = NULL WHERE id = ? AND user_id = ?',
+                [status_kirim, req.params.id, req.session.userId]
+            );
+        }
+        res.redirect('/manage-pesanan?status=updatesuccess');
+    } catch (err) {
+        console.error("🔥 Gagal mengubah status pengiriman pesanan:", err);
+        res.redirect('/manage-pesanan?status=updatefailed');
     }
 });
 
@@ -283,11 +347,14 @@ app.post('/pesanan/status/:id', isAuthenticated, async (req, res) => {
     }
 });
 
-// Update Data Item Pesanan & Catatan Textarea
+// Update Data Item Pesanan & Catatan Textarea (Mendukung Jam Kirim)
 app.post('/pesanan/update/:id', isAuthenticated, async (req, res) => {
-    const { jumlah_kue, rasa, ukuran, tanggal_kirim, pesanan_id, catatan } = req.body;
+    const { jumlah_kue, rasa, ukuran, tanggal_kirim, jam_kirim, pesanan_id, catatan } = req.body;
     try {
-        await db.query('UPDATE pesanan SET tanggal_kirim = ?, catatan = ? WHERE id = ? AND user_id = ?', [tanggal_kirim, catatan, pesanan_id, req.session.userId]);
+        await db.query(
+            'UPDATE pesanan SET tanggal_kirim = ?, jam_kirim = ?, catatan = ? WHERE id = ? AND user_id = ?', 
+            [tanggal_kirim, jam_kirim, catatan, pesanan_id, req.session.userId]
+        );
         await db.query(
             'UPDATE pesanan_detail SET jumlah_kue = ?, rasa = ?, ukuran = ? WHERE id = ?',
             [jumlah_kue, rasa, ukuran, req.params.id]
@@ -313,24 +380,27 @@ app.get('/pesanan/delete/:id', isAuthenticated, async (req, res) => {
     }
 });
 
-// 4. History Pesanan & Produksi Terkelompok
+// 4. History Pesanan (Invoice Harga Otomatis) & Produksi Terkelompok
 app.get('/history', isAuthenticated, async (req, res) => {
     const filterTanggal = req.query.tanggal || '';
     const cariNama = req.query.nama || '';
     try {
+        // Tarik profil harga jual kue per pcs milik akun yang sedang login saat ini
+        const [userMeta] = await db.query('SELECT harga_kue FROM users WHERE id = ?', [req.session.userId]);
+        const hargaSatuanKue = userMeta[0].harga_kue || 0;
+
         let paramsOrders = [req.session.userId];
         let paramsProduksi = [req.session.userId];
         
         let queryOrders = `
-            SELECT p.id AS pesanan_id, p.nama_pemesan, p.tanggal_kirim, p.status_bayar, p.catatan,
+            SELECT p.id AS pesanan_id, p.nama_pemesan, p.tanggal_kirim, p.jam_kirim, p.status_bayar, p.status_kirim, p.dikirim_pada, p.catatan,
                    pd.id AS detail_id, pd.jumlah_kue, pd.rasa, pd.ukuran, pd.is_frozen
             FROM pesanan p
             JOIN pesanan_detail pd ON p.id = pd.pesanan_id
             WHERE p.user_id = ?`;
             
-        let queryProduksi = `SELECT id, jumlah_kg, jumlah_kue, rasa, ukuran, tanggal_produksi FROM_SET produksi WHERE user_id = ?`;
-        let queryProduksiFix = queryProduksi.replace('FROM_SET', 'FROM');
-
+        let queryProduksi = `SELECT id, jumlah_kg, jumlah_kue, rasa, ukuran, tanggal_produksi FROM produksi WHERE user_id = ?`;
+        
         if (cariNama) {
             queryOrders += ' AND p.nama_pemesan LIKE ?';
             paramsOrders.push(`%${cariNama}%`);
@@ -338,17 +408,18 @@ app.get('/history', isAuthenticated, async (req, res) => {
 
         if (filterTanggal) {
             queryOrders += ' AND p.tanggal_kirim = ?';
-            queryProduksiFix += ' AND tanggal_produksi = ?';
+            queryProduksi += ' AND tanggal_produksi = ?';
             paramsOrders.push(filterTanggal);
             paramsProduksi.push(filterTanggal);
         }
         
         queryOrders += ' ORDER BY p.tanggal_kirim DESC, p.nama_pemesan ASC';
-        queryProduksiFix += ' ORDER BY tanggal_produksi DESC, jumlah_kg DESC';
+        queryProduksi += ' ORDER BY tanggal_produksi DESC, jumlah_kg DESC';
         
         const [rowsOrders] = await db.query(queryOrders, paramsOrders);
-        const [rowsProduksi] = await db.query(queryProduksiFix, paramsProduksi);
+        const [rowsProduksi] = await db.query(queryProduksi, paramsProduksi);
         
+        // ================= LOGIKA GROUPING LOG PESANAN + TOTAL INVOICE KELIPATAN HARGA =================
         const groupedOrdersMap = {};
         rowsOrders.forEach(row => {
             const tglString = new Date(row.tanggal_kirim).toLocaleDateString('fr-CA');
@@ -358,11 +429,19 @@ app.get('/history', isAuthenticated, async (req, res) => {
                 groupedOrdersMap[uniqueKey] = {
                     nama_pemesan: row.nama_pemesan,
                     tanggal_kirim: row.tanggal_kirim,
+                    jam_kirim: row.jam_kirim,
                     status_bayar: row.status_bayar,
+                    status_kirim: row.status_kirim,
+                    dikirim_pada: row.dikirim_pada,
                     catatan: row.catatan,
+                    total_pcs: 0, // Inisialisasi total pcs item terjual dalam 1 nota belanja
                     details: []
                 };
             }
+            
+            // Tambahkan kuantitas pcs belanjaan kue ke akumulator total nota
+            groupedOrdersMap[uniqueKey].total_pcs += parseInt(row.jumlah_kue);
+            
             groupedOrdersMap[uniqueKey].details.push({
                 jumlah_kue: row.jumlah_kue,
                 rasa: row.rasa,
@@ -370,8 +449,14 @@ app.get('/history', isAuthenticated, async (req, res) => {
                 is_frozen: row.is_frozen
             });
         });
-        const orders = Object.values(groupedOrdersMap);
 
+        // Map hasil objek belanjaan, lalu hitung total invoice bayar berdasarkan harga setelan di profil
+        const orders = Object.values(groupedOrdersMap).map(order => {
+            order.total_bayar = order.total_pcs * hargaSatuanKue;
+            return order;
+        });
+
+        // ================= LOGIKA GROUPING LOG PRODUKSI =================
         const groupedProduksiMap = {};
         rowsProduksi.forEach(row => {
             const tglString = new Date(row.tanggal_produksi).toLocaleDateString('fr-CA');
@@ -399,9 +484,39 @@ app.get('/history', isAuthenticated, async (req, res) => {
     }
 });
 
-// 5. Menu Profile Informasi & Logout
-app.get('/profile', isAuthenticated, (req, res) => {
-    res.render('profile');
+// 5. Menu Profile Informasi (Ganti Password, Ganti Email & Set Harga Jual Kue)
+app.get('/profile', isAuthenticated, async (req, res) => {
+    try {
+        const [userMeta] = await db.query('SELECT username, email, harga_kue FROM users WHERE id = ?', [req.session.userId]);
+        res.render('profile', { user: userMeta[0] || {} });
+    } catch (err) {
+        res.status(500).send("Gagal memuat profil admin.");
+    }
+});
+
+app.post('/profile/update', isAuthenticated, async (req, res) => {
+    const { email, password, harga_kue } = req.body;
+    try {
+        if (password && password.trim() !== "") {
+            // Jika kolom password baru diisi, enkripsi dan simpan kata sandi teranyar
+            const hashedPassword = await bcrypt.hash(password, 10);
+            await db.query(
+                'UPDATE users SET email = ?, password = ?, harga_kue = ? WHERE id = ?',
+                [email, hashedPassword, harga_kue, req.session.userId]
+            );
+        } else {
+            // Jika kolom password kosong, cukup perbarui email dan nominal konfigurasi harga jual kue gogos
+            await db.query(
+                'UPDATE users SET email = ?, harga_kue = ? WHERE id = ?',
+                [email, harga_kue, req.session.userId]
+            );
+        }
+        req.session.email = email; // Sinkronisasikan email pada sesi aktif
+        res.redirect('/profile?status=updatesuccess');
+    } catch (err) {
+        console.error("🔥 Gagal memperbarui rincian metadata profil user:", err);
+        res.redirect('/profile?status=updatefailed');
+    }
 });
 
 // Server Initialization

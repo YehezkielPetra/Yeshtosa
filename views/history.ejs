@@ -46,7 +46,10 @@
             <% orders.forEach(order => { %>
                 <div class="p-4 border dark:border-gray-700 rounded-xl flex flex-col justify-between gap-2 bg-gray-50/30 dark:bg-gray-900/20">
                     <div>
-                        <h4 class="font-bold text-sm text-gray-800 dark:text-white capitalize"><%= order.nama_pemesan %></h4>
+                        <div class="flex justify-between items-start flex-wrap gap-2">
+                            <h4 class="font-bold text-sm text-gray-800 dark:text-white capitalize"><%= order.nama_pemesan %></h4>
+                            <span class="text-xs font-black text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/20 px-2 py-0.5 rounded-md">Total Tagihan: Rp <%= order.total_bayar.toLocaleString('id-ID') %></span>
+                        </div>
                         
                         <div class="mt-2 space-y-1.5 pl-2 border-l-2 border-amber-300 dark:border-gray-600">
                             <% if (order.details && order.details.length > 0) { %>
@@ -66,11 +69,17 @@
                         <% } %>
                     </div>
                     
-                    <div class="flex items-center justify-between mt-2 pt-2 border-t border-gray-100 dark:border-gray-700/50">
-                        <span class="block text-[11px] font-medium text-gray-400">Kirim: <%= order.tanggal_kirim.toLocaleDateString('id-ID', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' }) %></span>
-                        <span class="inline-block text-[10px] font-bold px-2 py-0.5 rounded-full <%= order.status_bayar==='sudah bayar'?'bg-green-100 text-green-700 dark:bg-green-900/20':'bg-red-100 text-red-700 dark:bg-red-900/20' %>">
-                            <%= order.status_bayar.toUpperCase() %>
-                        </span>
+                    <div class="flex flex-wrap items-center justify-between mt-2 pt-2 border-t border-gray-100 dark:border-gray-700/50 text-[11px] gap-2">
+                        <span class="text-gray-400 font-medium">Target Kirim: <%= order.tanggal_kirim.toLocaleDateString('id-ID', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }) %> Jam <%= order.jam_kirim || '--:--' %></span>
+                        <div class="flex items-center space-x-2">
+                            <span class="px-2 py-0.5 rounded-full font-bold text-[10px] <%= order.status_kirim === 'Berhasil Dikirim' ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-100 text-blue-700' %>"><%= order.status_kirim %></span>
+                            <% if (order.status_kirim === 'Berhasil Dikirim' && order.dikirim_pada) { %>
+                                <span class="text-emerald-600 dark:text-emerald-400 font-bold bg-emerald-50 dark:bg-emerald-950/20 px-1.5 py-0.5 rounded">⏱️ Sukses Jam: <%= new Date(order.dikirim_pada).toLocaleTimeString('id-ID', {hour: '2-digit', minute:'2-digit'}) %></span>
+                            <% } %>
+                            <span class="inline-block font-bold px-2 py-0.5 rounded-full <%= order.status_bayar==='sudah bayar'?'bg-green-100 text-green-700':'bg-red-100 text-red-700' %>">
+                                <%= order.status_bayar.toUpperCase() %>
+                            </span>
+                        </div>
                     </div>
                 </div>
             <% }) %>
@@ -117,15 +126,15 @@
         const pesananBtn = document.getElementById('tab-btn-pesanan');
         const produksiBtn = document.getElementById('tab-btn-produksi');
         const pesananContent = document.getElementById('content-tab-pesanan');
-        constApp = document.getElementById('content-tab-produksi');
+        const appContent = document.getElementById('content-tab-produksi');
 
         if (tabName === 'pesanan') {
             pesananContent.classList.remove('hidden');
-            constApp.classList.add('hidden');
+            appContent.classList.add('hidden');
             pesananBtn.className = "px-5 py-2.5 rounded-xl text-sm font-bold transition duration-200 bg-white dark:bg-gray-800 text-gray-800 dark:text-white shadow-sm";
             produksiBtn.className = "px-5 py-2.5 rounded-xl text-sm font-bold transition duration-200 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200";
         } else if (tabName === 'produksi') {
-            constApp.classList.remove('hidden');
+            appContent.classList.remove('hidden');
             pesananContent.classList.add('hidden');
             produksiBtn.className = "px-5 py-2.5 rounded-xl text-sm font-bold transition duration-200 bg-white dark:bg-gray-800 text-gray-800 dark:text-white shadow-sm";
             pesananBtn.className = "px-5 py-2.5 rounded-xl text-sm font-bold transition duration-200 text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200";

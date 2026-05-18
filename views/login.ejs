@@ -11,7 +11,7 @@
     
     <%- include('layouts/popup') %>
 
-    <button onclick="toggleTheme()" class="absolute top-4 right-4 bg-white dark:bg-gray-800 p-2 rounded-full shadow-md text-sm">🌓 Mode</button>
+    <button onclick="toggleTheme()" class="absolute top-4 right-4 bg-white dark:bg-gray-800 p-2 rounded-full shadow-md text-sm focus:outline-none">🌓 Mode</button>
 
     <div class="text-center mb-6">
         <span class="text-4xl">🎂</span>
@@ -20,7 +20,19 @@
     </div>
 
     <div class="bg-white dark:bg-gray-800 border border-amber-100 dark:border-gray-700 w-full max-w-md rounded-2xl p-8 shadow-sm">
-        <h2 class="text-xl font-serif font-bold text-gray-900 dark:text-white mb-6">Masuk</h2>
+        <h2 class="text-xl font-serif font-bold text-gray-900 dark:text-white mb-4">Masuk</h2>
+        
+        <% if (typeof status !== 'undefined' && status === 'deviceblocked') { %>
+            <div class="p-3.5 mb-4 text-xs text-red-700 bg-red-50 dark:bg-red-950/20 dark:text-red-400 rounded-xl border border-red-100 dark:border-red-900/40 leading-relaxed">
+                🔒 <strong>Akses Sesi Dikunci!</strong> Akun Anda terdeteksi sedang aktif terbuka pada perangkat <strong><%= last_device %></strong> (Login jam <%= last_time %>). Satu akun hanya boleh aktif di 1 device pada satu waktu demi keamanan data.
+            </div>
+        <% } %>
+        
+        <% if (typeof status !== 'undefined' && status === 'sessionoverwritten') { %>
+            <div class="p-3.5 mb-4 text-xs text-amber-700 bg-amber-50 dark:bg-amber-950/20 dark:text-amber-400 rounded-xl border border-amber-100 dark:border-amber-900/40 leading-relaxed">
+                ⚠️ <strong>Sesi Terputus!</strong> Akun Anda baru saja diambil alih atau login melalui perangkat komputer/perangkat mobile lain.
+            </div>
+        <% } %>
         
         <form action="/login" method="POST" class="space-y-4">
             <div>
@@ -33,7 +45,7 @@
                 <div class="relative">
                     <input type="password" id="password" name="password" placeholder="Masukkan password" required
                         class="w-full px-4 py-3 bg-kue-input dark:bg-gray-700 border-none rounded-xl text-gray-800 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-kue-brand text-sm pr-10">
-                    <button type="button" onclick="togglePwd()" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400">👁️</button>
+                    <button type="button" onclick="togglePwd()" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 focus:outline-none">👁️</button>
                 </div>
             </div>
             <button type="submit" class="w-full py-3 bg-kue-brand hover:bg-kue-brandHover text-white font-medium rounded-xl shadow-sm transition-colors text-sm mt-2">Masuk</button>

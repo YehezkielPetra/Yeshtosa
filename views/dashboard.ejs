@@ -1,8 +1,19 @@
 <%- include('layouts/header') %>
 <div class="space-y-6">
-    <div class="bg-gradient-to-r from-amber-400 to-amber-500 text-white p-6 rounded-2xl shadow-sm">
-        <h2 class="text-xl font-bold font-serif mb-1">Selamat Datang Kembali, <%= username %>!</h2>
-        <p class="text-xs opacity-90">Pantau pergerakan saldo stok gogos dan kelola pesanan toko kue Yeshtosa Anda.</p>
+    <div class="bg-gradient-to-r from-amber-400 to-amber-500 text-white p-6 rounded-2xl shadow-sm flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+            <h2 class="text-xl font-bold font-serif mb-1">Selamat Datang Kembali, <%= username %>!</h2>
+            <p class="text-xs opacity-90">Pantau pergerakan saldo stok gogos dan kelola pesanan toko kue Yeshtosa Anda.</p>
+        </div>
+        
+        <% if (typeof profile !== 'undefined') { %>
+            <div class="bg-white/10 p-3 rounded-xl text-[11px] backdrop-blur-xs min-w-[240px] border border-white/10">
+                <p class="font-bold">🖥️ Sesi Perangkat Terakhir:</p>
+                <p class="opacity-90 mt-0.5"><%= profile.last_device || 'Tidak Terdeteksi' %></p>
+                <p class="font-bold mt-2">🕒 Waktu Akses Terakhir:</p>
+                <p class="opacity-90 mt-0.5"><%= profile.last_login_at ? new Date(profile.last_login_at).toLocaleString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '-' %></p>
+            </div>
+        <% } %>
     </div>
 
     <div class="bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-sm border dark:border-gray-700">
@@ -17,7 +28,7 @@
                     <tr class="bg-gray-50 dark:bg-gray-900 text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider border-b dark:border-gray-700 text-xs">
                         <th class="p-3">Varian Rasa</th>
                         <th class="p-3">Ukuran Kue</th>
-                        <th class="p-3 text-right">Saldo Saldo Stok (Pcs)</th>
+                        <th class="p-3 text-right">Saldo Stok (Pcs)</th>
                         <th class="p-3 text-center">Status</th>
                     </tr>
                 </thead>
